@@ -1,0 +1,34 @@
+name: Rebuild manifest
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "stories/**"
+
+permissions:
+  contents: write
+
+jobs:
+  manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build manifest.json
+        run: |
+          python3 - <<'EOF'
+          import json, os
+          files = sorted(f for f in os.listdir("stories") if f.endswith(".json"))
+          with open("manifest.json", "w") as fh:
+              json.dump({"stories": files}, fh, indent=2)
+          print(f"Manifest lists {len(files)} story file(s)")
+          EOF
+
+      - name: Commit manifest if changed
+        run: |
+          git config user.name "reading-room-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add manifest.json
+          git diff --cached --quiet && echo "No change" || git commit -m "Rebuild manifest"
+          git push

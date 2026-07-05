@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Prepare a story — The Reading Room</title>
+<style>
+  :root{--paper:#efe9dd;--raised:#f6f1e7;--ink:#2b2622;--soft:#5e564c;--faint:#938878;
+    --rule:#d8cfbd;--ox:#7c2d2d;--oxs:#a24a42}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);font-family:Georgia,serif;
+    font-size:17px;line-height:1.6;padding:2rem 1rem 5rem}
+  .wrap{max-width:44rem;margin:0 auto}
+  h1{font-weight:500;font-size:1.7rem;margin-bottom:.3rem}
+  h1 em{font-style:italic;color:var(--ox)}
+  .sub{font-style:italic;color:var(--soft);margin-bottom:2rem;font-size:.95rem}
+  label{display:block;font-family:ui-monospace,monospace;font-size:.68rem;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:1.1rem 0 .35rem}
+  input,textarea{width:100%;background:var(--raised);border:1px solid var(--rule);
+    border-radius:.4rem;padding:.6rem .8rem;color:var(--ink);font-family:Georgia,serif;font-size:1rem}
+  input:focus-visible,textarea:focus-visible{outline:2px solid var(--ox);outline-offset:1px}
+  textarea{min-height:16rem;line-height:1.6;resize:vertical}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  @media(max-width:560px){.row{grid-template-columns:1fr}}
+  button{margin-top:1.6rem;background:var(--ox);color:var(--raised);border:none;
+    border-radius:.45rem;padding:.8rem 1.6rem;cursor:pointer;
+    font-family:ui-monospace,monospace;font-size:.74rem;letter-spacing:.13em;text-transform:uppercase}
+  button:hover{background:var(--oxs)}
+  button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  .msg{margin-top:1rem;font-style:italic;min-height:1.4em}
+  .msg.ok{color:#4a5f45}
+  .msg.err{color:var(--ox)}
+  .hint{font-size:.82rem;color:var(--faint);font-style:italic;margin-top:.3rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Prepare a <em>story</em></h1>
+  <p class="sub">Paste your edited text, name it, seal it. This page works entirely on your
+  machine; nothing is sent anywhere. Frontmatter at the top of the pasted text
+  (title, character, tags…) is read automatically and fills the form.</p>
+
+  <label for="body">Story text (markdown)</label>
+  <textarea id="body" placeholder="Paste the full edited story here…"></textarea>
+
+  <div class="row">
+    <div><label for="title">Title</label><input id="title"></div>
+    <div><label for="date">Date</label><input id="date" type="date"></div>
+  </div>
+  <div class="row">
+    <div><label for="character">Character</label><input id="character" placeholder="Gale"></div>
+    <div><label for="scenario">Scenario</label><input id="scenario" placeholder="Thaw"></div>
+  </div>
+  <div class="row">
+    <div><label for="tags">Tags (comma separated)</label><input id="tags" placeholder="slow burn, amnesia"></div>
+    <div><label for="status">Status</label><input id="status" placeholder="complete"></div>
+  </div>
+  <label for="summary">Summary (one line, shown on the shelf)</label>
+  <input id="summary">
+
+  <label for="pass">Passphrase</label>
+  <input id="pass" type="password" autocomplete="new-password">
+  <p class="hint">Must be the same passphrase every time. It is never stored and never recoverable.</p>
+
+  <button id="seal">Seal &amp; download</button>
+  <p class="msg" id="msg"></p>
+</div>
+
+<script>
+/* ===== crypto — identical parameters to index.html ===== */
+const ITER = 310000;
+const b64 = a => btoa(String.fromCharCode(...new Uint8Array(a)));
+async function deriveKey(pass, salt){
+  const raw = await crypto.subtle.importKey("raw", new TextEncoder().encode(pass),
+    "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2", salt, iterations:ITER, hash:"SHA-256"},
+    raw, {name:"AES-GCM", length:256}, false, ["encrypt"]);
+}
+
+/* ===== frontmatter auto-fill on paste ===== */
+const $ = s=>document.querySelector(s);
+$("#body").addEventListener("input", ()=>{
+  const t = $("#body").value;
+  const m = t.match(/^---\s*\n([\s\S]*?)\n---\s*\n?/);
+  if(!m) return;
+  const fm = {};
+  m[1].split("\n").forEach(line=>{
+    const i = line.indexOf(":"); if(i<0) return;
+    fm[line.slice(0,i).trim().toLowerCase()] = line.slice(i+1).trim();
+  });
+  const set = (id, v)=>{ if(v && !$(id).value) $(id).value = v; };
+  set("#title", fm.title); set("#character", fm.character);
+  set("#scenario", fm.scenario); set("#summary", fm.summary);
+  set("#status", fm.status); set("#date", fm.date);
+  if(fm.tags && !$("#tags").value)
+    $("#tags").value = fm.tags.replace(/[\[\]]/g,"");
+});
+
+/* ===== seal ===== */
+$("#seal").onclick = async ()=>{
+  const msg = $("#msg"); msg.className="msg"; msg.textContent="";
+  let body = $("#body").value.trim();
+  const pass = $("#pass").value;
+  if(!body){ msg.className="msg err"; msg.textContent="Paste the story text first."; return; }
+  if(!$("#title").value.trim()){ msg.className="msg err"; msg.textContent="A story needs a title."; return; }
+  if(pass.length < 8){ msg.className="msg err"; msg.textContent="Passphrase needs to be at least 8 characters."; return; }
+  body = body.replace(/^---\s*\n[\s\S]*?\n---\s*\n?/,""); // strip frontmatter from body
+
+  const story = {
+    title: $("#title").value.trim(),
+    character: $("#character").value.trim(),
+    scenario: $("#scenario").value.trim(),
+    tags: $("#tags").value.split(",").map(s=>s.trim()).filter(Boolean),
+    status: $("#status").value.trim() || "complete",
+    date: $("#date").value || new Date().toISOString().slice(0,10),
+    summary: $("#summary").value.trim(),
+    body
+  };
+
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv   = crypto.getRandomValues(new Uint8Array(12));
+  const key  = await deriveKey(pass, salt);
+  const ct   = await crypto.subtle.encrypt({name:"AES-GCM", iv}, key,
+    new TextEncoder().encode(JSON.stringify(story)));
+
+  const pkg = {v:1, salt:b64(salt), iv:b64(iv), ct:b64(ct)};
+
+  // neutral filename: story-XXXX.json from a hash of title+date
+  const digest = await crypto.subtle.digest("SHA-256",
+    new TextEncoder().encode(story.title + story.date));
+  const short = [...new Uint8Array(digest)].slice(0,3)
+    .map(x=>x.toString(16).padStart(2,"0")).join("");
+  const fname = `story-${short}.json`;
+
+  const blob = new Blob([JSON.stringify(pkg)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = fname; a.click();
+  URL.revokeObjectURL(a.href);
+
+  msg.className="msg ok";
+  msg.textContent = `Sealed. Save ${fname} into the stories/ folder, then commit and push.`;
+};
+</script>
+</body>
+</html>
