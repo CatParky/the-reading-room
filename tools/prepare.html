@@ -36,16 +36,17 @@
 </head>
 <body>
 <div class="wrap">
+  <p style="margin-bottom:1.4rem"><a href="../index.html" style="font-family:ui-monospace,monospace;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ox);text-decoration:none">‹ Back to the library</a></p>
   <h1>Prepare a <em>story</em></h1>
   <p class="sub">Paste your edited text, name it, seal it. This page works entirely on your
-  machine; nothing is sent anywhere. Frontmatter at the top of the pasted text
+  machine — nothing is sent anywhere. Frontmatter at the top of the pasted text
   (title, character, tags…) is read automatically and fills the form.</p>
 
   <label for="body">Story text (markdown)</label>
   <textarea id="body" placeholder="Paste the full edited story here…"></textarea>
 
   <div class="row">
-    <div><label for="title">Title</label><input id="title"></div>
+    <div><label for="title">Title (optional — defaults to Scenario name)</label><input id="title"></div>
     <div><label for="date">Date</label><input id="date" type="date"></div>
   </div>
   <div class="row">
@@ -53,7 +54,7 @@
     <div><label for="scenario">Scenario</label><input id="scenario" placeholder="Thaw"></div>
   </div>
   <div class="row">
-    <div><label for="tags">Tags (comma separated)</label><input id="tags" placeholder="slow burn, amnesia"></div>
+    <div><label for="tags">Tags (comma separated — these drive the filters)</label><input id="tags" placeholder="slow burn, amnesia, cabin"></div>
     <div><label for="status">Status</label><input id="status" placeholder="complete"></div>
   </div>
   <label for="summary">Summary (one line, shown on the shelf)</label>
@@ -65,6 +66,14 @@
 
   <button id="seal">Seal &amp; download</button>
   <p class="msg" id="msg"></p>
+  <div style="margin-top:1.6rem;background:var(--raised);border:1px solid var(--rule);border-radius:.5rem;padding:1.1rem 1.2rem;font-size:.88rem;line-height:1.7;color:var(--soft)">
+    <strong style="font-family:ui-monospace,monospace;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:.5rem">After downloading</strong>
+    1. Save the <code style="font-family:ui-monospace,monospace;font-size:.85em">story-XXXX.json</code> file to:<br>
+    <code style="font-family:ui-monospace,monospace;font-size:.82em;word-break:break-all">C:\Users\cathe\GitHub Repositories\the-reading-room\stories</code><br><br>
+    2. Open <strong>GitHub Desktop</strong>. It will show the new file in the Changes panel.<br><br>
+    3. Type a short summary (e.g. <em>Add Masquerade</em>), click <strong>Commit to main</strong>, then click <strong>Push origin</strong>.<br><br>
+    Your story will be live in the library within about a minute.
+  </div>
 </div>
 
 <script>
@@ -111,7 +120,7 @@ $("#seal").onclick = async ()=>{
     msg.className="msg err";
     msg.textContent="This browser context can't encrypt. Open the tool at its https:// address (catparky.github.io/the-reading-room/tools/prepare.html)."; return; }
   if(!body){ msg.className="msg err"; msg.textContent="Paste the story text first."; return; }
-  if(!$("#title").value.trim()){ msg.className="msg err"; msg.textContent="A story needs a title."; return; }
+  if(!$("#title").value.trim() && !$("#scenario").value.trim()){ msg.className="msg err"; msg.textContent="Fill in at least the Scenario name."; return; }
   if(pass.length < 8){ msg.className="msg err"; msg.textContent="Passphrase needs to be at least 8 characters."; return; }
   body = body.replace(/^---\s*\n[\s\S]*?\n---\s*\n?/,""); // strip frontmatter from body
 

@@ -17,7 +17,7 @@
     --font-display:"Fraunces",Georgia,serif;
     --font-body:"Spectral",Georgia,serif;
     --font-mono:"IBM Plex Mono",ui-monospace,monospace;
-    --measure:34rem; --prose-size:1.12rem;
+    --measure:52rem; --prose-size:1.12rem;
   }
   [data-theme="dark"]{
     --paper:#1a1714; --paper-raised:#221e1a;
@@ -129,7 +129,7 @@
   .back:hover{color:var(--oxblood)}
   .back:focus-visible{outline:2px solid var(--oxblood);outline-offset:2px}
   .reader-actions{margin-left:auto;display:flex;gap:.4rem;align-items:center}
-  .page{max-width:var(--measure);margin:0 auto;padding:2.4rem clamp(1.1rem,5vw,1rem) 6rem}
+  .page{max-width:var(--measure);margin:0 auto;padding:2.4rem clamp(1.2rem,5vw,3rem) 6rem}
   .page-eyebrow{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.1em;
     text-transform:uppercase;color:var(--oxblood);margin-bottom:.8rem}
   .page-title{font-family:var(--font-display);font-optical-sizing:auto;font-weight:500;
@@ -281,14 +281,25 @@ function cycleTheme(){ const cur = document.documentElement.dataset.theme || "li
 $("#themeBtn").onclick = cycleTheme; $("#themeBtn2").onclick = cycleTheme;
 setTheme(localStorage.getItem("rr_theme") ||
   (matchMedia("(prefers-color-scheme:dark)").matches ? "dark" : "light"));
-const SIZES = ["1.02rem","1.12rem","1.24rem","1.38rem"];
-function cycleSize(){ const cur = getComputedStyle(document.documentElement).getPropertyValue("--prose-size").trim();
-  const next = SIZES[(SIZES.indexOf(cur)+1) % SIZES.length] || SIZES[1];
-  document.documentElement.style.setProperty("--prose-size", next);
-  localStorage.setItem("rr_size", next); }
+// Aa cycles through three reading modes: comfortable / wide / focused
+const READ_MODES = [
+  {size:"1.02rem", measure:"42rem"},
+  {size:"1.12rem", measure:"52rem"},
+  {size:"1.24rem", measure:"62rem"},
+  {size:"1.38rem", measure:"72rem"},
+];
+let readModeIdx = 1;
+function applyReadMode(idx){
+  const m = READ_MODES[idx];
+  document.documentElement.style.setProperty("--prose-size", m.size);
+  document.documentElement.style.setProperty("--measure", m.measure);
+  localStorage.setItem("rr_mode", idx);
+}
+function cycleSize(){ readModeIdx = (readModeIdx+1) % READ_MODES.length; applyReadMode(readModeIdx); }
 $("#sizeBtn").onclick = cycleSize; $("#sizeBtn2").onclick = cycleSize;
-const savedSize = localStorage.getItem("rr_size");
-if(savedSize) document.documentElement.style.setProperty("--prose-size", savedSize);
+const savedMode = localStorage.getItem("rr_mode");
+if(savedMode !== null){ readModeIdx = +savedMode; applyReadMode(readModeIdx); }
+else applyReadMode(1);
 
 /* ================= facets & filtering ================= */
 const uniq = k => [...new Set(DATA.flatMap(d=>Array.isArray(d[k])?d[k]:[d[k]]).filter(Boolean))].sort();
@@ -334,14 +345,15 @@ function render(){
   list.forEach(d=>{
     const c = document.createElement("button"); c.className="card";
     c.innerHTML = `
-      <span class="card-eyebrow">${esc(d.character||"")} · ${esc(d.scenario||"")}</span>
-      <span class="card-title">${esc(d.title||"Untitled")}</span>
+      <span class="card-eyebrow">${esc(d.character||"")} · ${esc(d.scenario||"")}${d.date?" · "+fmtDate(d.date):""}</span>
+      <span class="card-title">${esc(d.title||d.scenario||"Untitled")}</span>
       <span class="card-sub">${esc(d.summary||"")}</span>
-      <span class="card-foot">${(d.tags||[]).slice(0,4).map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</span>`;
+      <span class="card-foot">${(d.tags||[]).slice(0,3).map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</span>`;
     c.onclick = ()=>openReader(d);
     cards.appendChild(c);
   });
 }
+function fmtDate(d){ if(!d) return ""; try{ const dt=new Date(d+"T12:00:00"); return dt.toLocaleDateString("en-GB",{month:"short",year:"numeric"}); }catch(e){return d;} }
 function esc(s){ return String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
 /* ================= markdown rendering ================= */
@@ -369,7 +381,7 @@ function openReader(d){
   current = d;
   $("#page").innerHTML = `
     <div class="page-eyebrow">${esc(d.character||"")} · ${esc(d.scenario||"")}${d.date?" · "+esc(d.date):""}</div>
-    <h1 class="page-title">${esc(d.title||"Untitled")}</h1>
+    <h1 class="page-title">${esc(d.title||d.scenario||"Untitled")}</h1>
     <div class="page-sub">${esc(d.summary||"")}</div>
     <div class="prose">${md(d.body||"")}</div>`;
   $("#reader").classList.add("open"); $("#reader").setAttribute("aria-hidden","false");
