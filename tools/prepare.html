@@ -70,7 +70,11 @@
 <script>
 /* ===== crypto — identical parameters to index.html ===== */
 const ITER = 310000;
-const b64 = a => btoa(String.fromCharCode(...new Uint8Array(a)));
+const b64 = a => {
+  const u = new Uint8Array(a); let s = "";
+  for(let i=0;i<u.length;i+=0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i+0x8000));
+  return btoa(s);
+};
 async function deriveKey(pass, salt){
   const raw = await crypto.subtle.importKey("raw", new TextEncoder().encode(pass),
     "PBKDF2", false, ["deriveKey"]);
@@ -100,8 +104,12 @@ $("#body").addEventListener("input", ()=>{
 /* ===== seal ===== */
 $("#seal").onclick = async ()=>{
   const msg = $("#msg"); msg.className="msg"; msg.textContent="";
+  try{
   let body = $("#body").value.trim();
   const pass = $("#pass").value;
+  if(!window.crypto || !crypto.subtle){
+    msg.className="msg err";
+    msg.textContent="This browser context can't encrypt. Open the tool at its https:// address (catparky.github.io/the-reading-room/tools/prepare.html)."; return; }
   if(!body){ msg.className="msg err"; msg.textContent="Paste the story text first."; return; }
   if(!$("#title").value.trim()){ msg.className="msg err"; msg.textContent="A story needs a title."; return; }
   if(pass.length < 8){ msg.className="msg err"; msg.textContent="Passphrase needs to be at least 8 characters."; return; }
@@ -140,6 +148,11 @@ $("#seal").onclick = async ()=>{
 
   msg.className="msg ok";
   msg.textContent = `Sealed. Save ${fname} into the stories/ folder, then commit and push.`;
+  }catch(err){
+    msg.className="msg err";
+    msg.textContent = "Something went wrong: " + (err && err.message ? err.message : err) +
+      " — if this mentions 'crypto' or 'subtle', open this page via its https:// address rather than double-clicking the file.";
+  }
 };
 </script>
 </body>
