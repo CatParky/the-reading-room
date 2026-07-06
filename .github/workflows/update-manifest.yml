@@ -1,0 +1,51 @@
+name: Update story manifest
+
+# Runs whenever story files change on the main branch
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'stories/**'
+  # Lets you also trigger it by hand from the Actions tab
+  workflow_dispatch:
+
+# Allow the action to commit the updated manifest back to the repo
+permissions:
+  contents: write
+
+jobs:
+  build-manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Rebuild manifest.json from the stories folder
+        run: |
+          # List every story-*.json in stories/, sort, and wrap as JSON.
+          # jq -R reads each filename as a raw string; -s slurps them into
+          # an array; the final object matches what the library expects.
+          if ls stories/story-*.json >/dev/null 2>&1; then
+            ls stories/story-*.json \
+              | xargs -n1 basename \
+              | sort \
+              | jq -R . \
+              | jq -s '{stories: .}' > manifest.json
+          else
+            echo '{"stories": []}' > manifest.json
+          fi
+          echo "Generated manifest.json:"
+          cat manifest.json
+
+      - name: Commit and push if the manifest changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Only commit when there is an actual change, to avoid empty commits
+          if ! git diff --quiet manifest.json; then
+            git add manifest.json
+            git commit -m "Auto-update story manifest"
+            git push
+          else
+            echo "Manifest already up to date — nothing to commit."
+          fi
