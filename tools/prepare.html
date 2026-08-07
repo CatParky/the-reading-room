@@ -5,13 +5,29 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Prepare a story — The Reading Room</title>
+<script>
+  // set theme before first paint to avoid a flash
+  (function(){ var t = localStorage.getItem("rr_theme") ||
+    (matchMedia("(prefers-color-scheme:dark)").matches ? "dark" : "light");
+    document.documentElement.dataset.theme = t; })();
+</script>
 <style>
   :root{--paper:#efe9dd;--raised:#f6f1e7;--ink:#2b2622;--soft:#5e564c;--faint:#938878;
-    --rule:#d8cfbd;--ox:#7c2d2d;--oxs:#a24a42}
+    --rule:#d8cfbd;--ox:#7c2d2d;--oxs:#a24a42;--ok:#4a5f45}
+  [data-theme="dark"]{--paper:#1a1714;--raised:#221e1a;--ink:#e9e1d3;--soft:#b3a894;--faint:#7d7263;
+    --rule:#352f28;--ox:#c9756b;--oxs:#d98a80;--ok:#8b9a7f}
+  [data-theme="night"]{--paper:#101418;--raised:#171c22;--ink:#c9d4de;--soft:#8d9aa8;--faint:#5d6975;
+    --rule:#232b34;--ox:#c98a6b;--oxs:#d99f80;--ok:#7f9a8f}
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--paper);color:var(--ink);font-family:Georgia,serif;
-    font-size:17px;line-height:1.6;padding:2rem 1rem 5rem}
+    font-size:17px;line-height:1.6;padding:2rem 1rem 5rem;transition:background .4s,color .4s}
   .wrap{max-width:44rem;margin:0 auto}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1.4rem}
+  .theme-btn{background:none;border:1px solid var(--rule);border-radius:2rem;color:var(--soft);
+    font-family:ui-monospace,monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;
+    padding:.32rem .8rem;cursor:pointer;margin:0;transition:all .2s}
+  .theme-btn:hover{border-color:var(--faint);color:var(--ink);background:none}
+  .theme-btn:focus-visible{outline:2px solid var(--ox);outline-offset:2px}
   h1{font-weight:500;font-size:1.7rem;margin-bottom:.3rem}
   h1 em{font-style:italic;color:var(--ox)}
   .sub{font-style:italic;color:var(--soft);margin-bottom:2rem;font-size:.95rem}
@@ -23,24 +39,36 @@
   textarea{min-height:16rem;line-height:1.6;resize:vertical}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
   @media(max-width:560px){.row{grid-template-columns:1fr}}
-  button{margin-top:1.6rem;background:var(--ox);color:var(--raised);border:none;
+  button{margin-top:1.6rem;background:var(--ox);color:var(--paper);border:none;
     border-radius:.45rem;padding:.8rem 1.6rem;cursor:pointer;
     font-family:ui-monospace,monospace;font-size:.74rem;letter-spacing:.13em;text-transform:uppercase}
   button:hover{background:var(--oxs)}
   button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
   .msg{margin-top:1rem;font-style:italic;min-height:1.4em}
-  .msg.ok{color:#4a5f45}
+  .msg.ok{color:var(--ok)}
   .msg.err{color:var(--ox)}
   .hint{font-size:.82rem;color:var(--faint);font-style:italic;margin-top:.3rem}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <p style="margin-bottom:1.4rem"><a href="../index.html" style="font-family:ui-monospace,monospace;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ox);text-decoration:none">‹ Back to the library</a></p>
+  <div class="topbar">
+    <a href="../index.html" style="font-family:ui-monospace,monospace;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ox);text-decoration:none">‹ Back to the library</a>
+    <button class="theme-btn" id="themeBtn">Theme</button>
+  </div>
   <h1>Prepare a <em>story</em></h1>
   <p class="sub">Paste your edited text, name it, seal it. This page works entirely on your
   machine — nothing is sent anywhere. Frontmatter at the top of the pasted text
   (title, character, tags…) is read automatically and fills the form.</p>
+
+  <details id="tagMgr" style="margin-bottom:1.8rem;background:var(--raised);border:1px solid var(--rule);border-radius:.5rem;padding:0 1.1rem">
+    <summary style="cursor:pointer;padding:.9rem 0;font-family:ui-monospace,monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--soft)">Manage your tag list</summary>
+    <div style="padding:0 0 1.1rem">
+      <p style="font-size:.85rem;color:var(--soft);font-style:italic;margin-bottom:.9rem;line-height:1.6">
+        This is your autocomplete suggestion list, kept on this device. Rename or delete entries here to keep future tagging tidy. Note: this does not change tags already sealed inside stories — for those, re-seal the story.</p>
+      <div id="mgrList"></div>
+    </div>
+  </details>
 
   <label for="body">Story text (markdown)</label>
   <textarea id="body" placeholder="Paste the full edited story here…"></textarea>
@@ -101,6 +129,16 @@ async function deriveKey(pass, salt){
 
 /* ===== frontmatter auto-fill on paste ===== */
 const $ = s=>document.querySelector(s);
+
+/* ===== theme (shares rr_theme with the library) ===== */
+const THEMES = ["light","dark","night"];
+function setTheme(t){ document.documentElement.dataset.theme = t; localStorage.setItem("rr_theme", t); }
+$("#themeBtn").onclick = ()=>{
+  const cur = document.documentElement.dataset.theme || "light";
+  setTheme(THEMES[(THEMES.indexOf(cur)+1)%THEMES.length]);
+};
+setTheme(localStorage.getItem("rr_theme") ||
+  (matchMedia("(prefers-color-scheme:dark)").matches ? "dark" : "light"));
 $("#body").addEventListener("input", ()=>{
   const t = $("#body").value;
   const m = t.match(/^---\s*\n([\s\S]*?)\n---\s*\n?/);
@@ -192,6 +230,47 @@ $("#tags").addEventListener("blur", ()=>{
   setTimeout(()=>{ $("#tagDrop").style.display="none"; }, 150);
 });
 renderChips();
+
+/* ===== tag library manager ===== */
+(function normaliseLibrary(){
+  const lib = loadTagLibrary();
+  const lowered = [...new Set(lib.map(t=>t.trim().toLowerCase()).filter(Boolean))].sort();
+  if(JSON.stringify(lowered)!==JSON.stringify(lib)) saveTagLibrary(lowered);
+})();
+function renderManager(){
+  const box = $("#mgrList"); if(!box) return;
+  const lib = loadTagLibrary();
+  if(!lib.length){ box.innerHTML = `<p style="font-size:.85rem;color:var(--faint);font-style:italic">No tags yet — they'll appear here as you use them.</p>`; return; }
+  box.innerHTML = "";
+  lib.forEach(t=>{
+    const row = document.createElement("div");
+    row.style.cssText="display:flex;gap:.5rem;align-items:center;margin-bottom:.4rem";
+    const inp = document.createElement("input");
+    inp.value = t;
+    inp.style.cssText="flex:1;font-size:.9rem;padding:.4rem .6rem";
+    const rename = document.createElement("button");
+    rename.type="button"; rename.textContent="Rename";
+    rename.style.cssText="background:none;border:1px solid var(--rule);border-radius:.35rem;padding:.4rem .7rem;font-family:ui-monospace,monospace;font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;color:var(--soft);cursor:pointer;white-space:nowrap";
+    rename.onmousedown = e=>e.preventDefault();
+    rename.onclick = ()=>{
+      const nv = inp.value.trim().toLowerCase();
+      if(!nv || nv===t){ return; }
+      const lib2 = loadTagLibrary().filter(x=>x!==t);
+      if(!lib2.includes(nv)) lib2.push(nv);
+      saveTagLibrary(lib2);
+      renderManager();
+    };
+    const del = document.createElement("button");
+    del.type="button"; del.innerHTML="&times;";
+    del.title="Delete";
+    del.style.cssText="background:none;border:1px solid var(--rule);border-radius:.35rem;padding:.4rem .65rem;font-size:.9rem;color:var(--ox);cursor:pointer;line-height:1";
+    del.onmousedown = e=>e.preventDefault();
+    del.onclick = ()=>{ saveTagLibrary(loadTagLibrary().filter(x=>x!==t)); renderManager(); };
+    row.appendChild(inp); row.appendChild(rename); row.appendChild(del);
+    box.appendChild(row);
+  });
+}
+$("#tagMgr").addEventListener("toggle", ()=>{ if($("#tagMgr").open) renderManager(); });
 
 /* ===== seal ===== */
 $("#seal").onclick = async ()=>{
