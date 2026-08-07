@@ -46,17 +46,25 @@
   <textarea id="body" placeholder="Paste the full edited story here…"></textarea>
 
   <div class="row">
-    <div><label for="title">Title (optional — defaults to Scenario name)</label><input id="title"></div>
-    <div><label for="date">Date</label><input id="date" type="date"></div>
-  </div>
-  <div class="row">
+    <div><label for="scenario">Story Name (the book — groups chapters together)</label><input id="scenario" placeholder="The Tell"></div>
     <div><label for="character">Character</label><input id="character" placeholder="Gale"></div>
-    <div><label for="scenario">Scenario</label><input id="scenario" placeholder="Thaw"></div>
   </div>
   <div class="row">
-    <div><label for="tags">Tags (comma separated — these drive the filters)</label><input id="tags" placeholder="slow burn, amnesia, cabin"></div>
+    <div><label for="part">Part Number (optional)</label><input id="part" type="number" min="1" placeholder="1"></div>
+    <div><label for="title">Chapter Title (optional)</label><input id="title" placeholder="The Meeting"></div>
+  </div>
+  <div class="row">
+    <div><label for="date">Date</label><input id="date" type="date"></div>
     <div><label for="status">Status</label><input id="status" placeholder="complete"></div>
   </div>
+
+  <label for="tags">Tags (these drive the filters — always saved lowercase)</label>
+  <div id="tagChips" style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.5rem"></div>
+  <div style="position:relative">
+    <input id="tags" autocomplete="off" placeholder="click here to pick from your tags, or type a new one…">
+    <div id="tagDrop" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:10;background:var(--raised);border:1px solid var(--rule);border-radius:.4rem;margin-top:.25rem;max-height:14rem;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.12)"></div>
+  </div>
+
   <label for="summary">Summary (one line, shown on the shelf)</label>
   <input id="summary">
 
@@ -103,12 +111,87 @@ $("#body").addEventListener("input", ()=>{
     fm[line.slice(0,i).trim().toLowerCase()] = line.slice(i+1).trim();
   });
   const set = (id, v)=>{ if(v && !$(id).value) $(id).value = v; };
-  set("#title", fm.title); set("#character", fm.character);
-  set("#scenario", fm.scenario); set("#summary", fm.summary);
-  set("#status", fm.status); set("#date", fm.date);
-  if(fm.tags && !$("#tags").value)
-    $("#tags").value = fm.tags.replace(/[\[\]]/g,"");
+  set("#title", fm.chapter || fm.title); set("#character", fm.character);
+  set("#scenario", fm.story || fm.scenario); set("#summary", fm.summary);
+  set("#status", fm.status); set("#date", fm.date); set("#part", fm.part);
+  if(fm.tags && curTags.length===0)
+    fm.tags.replace(/[\[\]]/g,"").split(",").map(s=>s.trim()).filter(Boolean).forEach(addTag);
 });
+
+/* ===== tag autocomplete with growing lowercase library ===== */
+const TAGLIB_KEY = "rr_tag_library";
+let curTags = [];
+let dropIndex = -1;
+function loadTagLibrary(){
+  try{ return JSON.parse(localStorage.getItem(TAGLIB_KEY)) || []; }catch(e){ return []; }
+}
+function saveTagLibrary(list){ localStorage.setItem(TAGLIB_KEY, JSON.stringify([...new Set(list)].sort())); }
+function addTag(raw){
+  const t = String(raw).trim().toLowerCase();
+  if(!t || curTags.includes(t)) return;
+  curTags.push(t);
+  const lib = loadTagLibrary();
+  if(!lib.includes(t)){ lib.push(t); saveTagLibrary(lib); }
+  renderChips();
+}
+function removeTag(t){ curTags = curTags.filter(x=>x!==t); renderChips(); }
+function renderChips(){
+  const chips = $("#tagChips"); chips.innerHTML = "";
+  curTags.forEach(t=>{
+    const b = document.createElement("button");
+    b.type="button";
+    b.style.cssText="background:var(--ox);color:var(--raised);border:none;border-radius:2rem;padding:.28rem .7rem .28rem .8rem;font-family:ui-monospace,monospace;font-size:.72rem;cursor:pointer";
+    b.innerHTML = t + " &times;";
+    b.title = "Remove";
+    b.onclick = ()=>removeTag(t);
+    chips.appendChild(b);
+  });
+}
+function showDrop(){
+  const q = $("#tags").value.trim().toLowerCase();
+  const lib = loadTagLibrary().filter(t=>!curTags.includes(t));
+  const matches = q ? lib.filter(t=>t.includes(q)) : lib;
+  const drop = $("#tagDrop");
+  dropIndex = -1;
+  let html = "";
+  matches.forEach((t,i)=>{
+    html += `<div class="tagopt" data-tag="${t}" data-i="${i}" style="padding:.5rem .8rem;cursor:pointer;font-family:Georgia,serif;font-size:.9rem;color:var(--ink)">${t}</div>`;
+  });
+  // offer to create a new tag if what's typed isn't an exact existing match
+  if(q && !lib.includes(q) && !curTags.includes(q)){
+    html += `<div class="tagopt tagnew" data-tag="${q}" data-i="${matches.length}" style="padding:.5rem .8rem;cursor:pointer;font-family:Georgia,serif;font-size:.9rem;color:var(--ox);border-top:1px solid var(--rule)">+ create new tag “${q}”</div>`;
+  }
+  if(!html){ drop.style.display="none"; return; }
+  drop.innerHTML = html;
+  drop.style.display = "block";
+  drop.querySelectorAll(".tagopt").forEach(opt=>{
+    opt.onmousedown = e=>{ e.preventDefault(); addTag(opt.dataset.tag); $("#tags").value=""; showDrop(); $("#tags").focus(); };
+    opt.onmouseenter = ()=>{ highlight(+opt.dataset.i); };
+  });
+}
+function highlight(i){
+  const opts = $("#tagDrop").querySelectorAll(".tagopt");
+  dropIndex = i;
+  opts.forEach((o,j)=>{ o.style.background = j===i ? "var(--paper)" : "transparent"; });
+}
+$("#tags").addEventListener("focus", showDrop);
+$("#tags").addEventListener("input", showDrop);
+$("#tags").addEventListener("keydown", e=>{
+  const opts = $("#tagDrop").querySelectorAll(".tagopt");
+  if(e.key==="ArrowDown"){ e.preventDefault(); highlight(Math.min(dropIndex+1, opts.length-1)); }
+  else if(e.key==="ArrowUp"){ e.preventDefault(); highlight(Math.max(dropIndex-1, 0)); }
+  else if(e.key==="Enter"){
+    e.preventDefault();
+    if(dropIndex>=0 && opts[dropIndex]){ addTag(opts[dropIndex].dataset.tag); }
+    else { const v=$("#tags").value.trim(); if(v) v.split(",").forEach(addTag); }
+    $("#tags").value=""; showDrop();
+  }
+  else if(e.key==="Escape"){ $("#tagDrop").style.display="none"; }
+});
+$("#tags").addEventListener("blur", ()=>{
+  setTimeout(()=>{ $("#tagDrop").style.display="none"; }, 150);
+});
+renderChips();
 
 /* ===== seal ===== */
 $("#seal").onclick = async ()=>{
@@ -120,15 +203,19 @@ $("#seal").onclick = async ()=>{
     msg.className="msg err";
     msg.textContent="This browser context can't encrypt. Open the tool at its https:// address (catparky.github.io/the-reading-room/tools/prepare.html)."; return; }
   if(!body){ msg.className="msg err"; msg.textContent="Paste the story text first."; return; }
-  if(!$("#title").value.trim() && !$("#scenario").value.trim()){ msg.className="msg err"; msg.textContent="Fill in at least the Scenario name."; return; }
+  if(!$("#scenario").value.trim()){ msg.className="msg err"; msg.textContent="Fill in at least the Story Name."; return; }
   if(pass.length < 8){ msg.className="msg err"; msg.textContent="Passphrase needs to be at least 8 characters."; return; }
+  // catch any tag still sitting unsubmitted in the input
+  const pending = $("#tags").value.trim();
+  if(pending){ pending.split(",").forEach(addTag); $("#tags").value=""; }
   body = body.replace(/^---\s*\n[\s\S]*?\n---\s*\n?/,""); // strip frontmatter from body
 
   const story = {
     title: $("#title").value.trim(),
+    part: $("#part").value.trim(),
     character: $("#character").value.trim(),
     scenario: $("#scenario").value.trim(),
-    tags: $("#tags").value.split(",").map(s=>s.trim()).filter(Boolean),
+    tags: curTags.slice(),
     status: $("#status").value.trim() || "complete",
     date: $("#date").value || new Date().toISOString().slice(0,10),
     summary: $("#summary").value.trim(),
@@ -143,9 +230,9 @@ $("#seal").onclick = async ()=>{
 
   const pkg = {v:1, salt:b64(salt), iv:b64(iv), ct:b64(ct)};
 
-  // neutral filename: story-XXXX.json from a hash of title+date
+  // neutral filename from a hash of story name + part + chapter + date (keeps chapters distinct)
   const digest = await crypto.subtle.digest("SHA-256",
-    new TextEncoder().encode(story.title + story.date));
+    new TextEncoder().encode(story.scenario + "|" + story.part + "|" + story.title + "|" + story.date));
   const short = [...new Uint8Array(digest)].slice(0,3)
     .map(x=>x.toString(16).padStart(2,"0")).join("");
   const fname = `story-${short}.json`;

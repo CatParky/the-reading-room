@@ -110,6 +110,9 @@
   .card-eyebrow{font-family:var(--font-mono);font-size:.62rem;letter-spacing:.1em;
     text-transform:uppercase;color:var(--oxblood);display:flex;gap:.5rem;align-items:center}
   .card-title{font-family:var(--font-display);font-weight:500;font-size:1.22rem;line-height:1.15}
+  .card-chapter{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.06em;
+    color:var(--ink-faint);margin-top:-.2rem}
+  .card-chapter .part{color:var(--oxblood-soft);text-transform:uppercase;letter-spacing:.1em}
   .card-sub{font-style:italic;color:var(--ink-soft);font-size:.9rem}
   .card-foot{margin-top:auto;display:flex;flex-wrap:wrap;gap:.3rem;padding-top:.4rem}
   .tag{font-family:var(--font-mono);font-size:.6rem;color:var(--ink-faint);
@@ -135,6 +138,9 @@
   .page-title{font-family:var(--font-display);font-optical-sizing:auto;font-weight:500;
     font-size:clamp(2rem,7vw,2.8rem);line-height:1.05;letter-spacing:-.02em;margin-bottom:.4rem}
   .page-sub{font-style:italic;color:var(--ink-soft);font-size:1.12rem;margin-bottom:2.2rem}
+  .page-chapter{font-family:var(--font-mono);font-size:.8rem;letter-spacing:.05em;
+    color:var(--ink-soft);margin-bottom:1.4rem}
+  .page-chapter .part{color:var(--oxblood);text-transform:uppercase;letter-spacing:.1em}
   .prose{font-size:var(--prose-size);line-height:1.78}
   .prose p{margin:0 0 1.15em;text-wrap:pretty}
   .prose em{font-style:italic}
@@ -168,8 +174,6 @@
 
 <header class="masthead">
   <span class="wordmark">The Reading <em>Room</em></span>
-  <a class="pill" href="https://catparky.github.io/universal-story-export/landing.html" style="text-decoration:none">Refuge</a>
-  <a class="pill" href="https://catparky.github.io/universal-story-export/pipeline.html" style="text-decoration:none">Pipeline</a>
   <button class="pill" id="themeBtn">Theme</button>
   <button class="pill" id="sizeBtn" aria-label="Cycle text size">Aa</button>
   <button class="pill" id="lockBtn">Lock</button>
@@ -180,7 +184,7 @@
   <aside class="rail">
     <input class="search" id="search" type="search" placeholder="Search titles and text…" aria-label="Search">
     <div class="facet"><h3>Character</h3><div class="chips" id="f-character"></div></div>
-    <div class="facet"><h3>Scenario</h3><div class="chips" id="f-scenario"></div></div>
+    <div class="facet"><h3>Story</h3><div class="chips" id="f-scenario"></div></div>
     <div class="facet"><h3>Tags</h3><div class="chips" id="f-tags"></div></div>
     <div class="facet"><h3>Status</h3><div class="chips" id="f-status"></div></div>
     <button class="clear" id="clear" hidden>Clear all filters</button>
@@ -194,6 +198,7 @@
     <div class="reader-actions">
       <button class="pill" id="sizeBtn2" aria-label="Cycle text size">Aa</button>
       <button class="pill" id="themeBtn2">Theme</button>
+      <button class="pill" id="exportBtn">Export .md</button>
     </div>
   </div>
   <article class="page" id="page"></article>
@@ -247,7 +252,17 @@ async function loadLibrary(pass){
     }catch(e){ failed++; }
   }
   if(files.length && out.length===0) throw new Error("wrongpass");
-  DATA = out.sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  DATA = out.sort((a,b)=>{
+    // group by story name; within a story, order by part; across stories, newest first
+    const sa=(a.scenario||"").toLowerCase(), sb=(b.scenario||"").toLowerCase();
+    if(sa!==sb){
+      // sort stories by the most recent chapter date within each, newest first
+      return (b.date||"").localeCompare(a.date||"");
+    }
+    const pa=parseInt(a.part)||0, pb=parseInt(b.part)||0;
+    if(pa!==pb) return pa-pb;
+    return (a.date||"").localeCompare(b.date||"");
+  });
   if(failed) console.warn(failed+" file(s) failed to decrypt");
 }
 async function tryUnlock(pass, fromStorage){
@@ -346,9 +361,15 @@ function render(){
   }
   list.forEach(d=>{
     const c = document.createElement("button"); c.className="card";
+    const chapterBits = [];
+    if(d.part) chapterBits.push(`<span class="part">Part ${esc(d.part)}</span>`);
+    if(d.title) chapterBits.push(esc(d.title));
+    const chapterLine = chapterBits.length
+      ? `<span class="card-chapter">${chapterBits.join(" · ")}</span>` : "";
     c.innerHTML = `
-      <span class="card-eyebrow">${esc(d.character||"")} · ${esc(d.scenario||"")}${d.date?" · "+fmtDate(d.date):""}</span>
-      <span class="card-title">${esc(d.title||d.scenario||"Untitled")}</span>
+      <span class="card-eyebrow">${esc(d.character||"")}${d.date?" · "+fmtDate(d.date):""}</span>
+      <span class="card-title">${esc(d.scenario||d.title||"Untitled")}</span>
+      ${chapterLine}
       <span class="card-sub">${esc(d.summary||"")}</span>
       <span class="card-foot">${(d.tags||[]).slice(0,3).map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</span>`;
     c.onclick = ()=>openReader(d);
@@ -382,8 +403,9 @@ function inline(s){
 function openReader(d){
   current = d;
   $("#page").innerHTML = `
-    <div class="page-eyebrow">${esc(d.character||"")} · ${esc(d.scenario||"")}${d.date?" · "+esc(d.date):""}</div>
-    <h1 class="page-title">${esc(d.title||d.scenario||"Untitled")}</h1>
+    <div class="page-eyebrow">${esc(d.character||"")}${d.date?" · "+esc(d.date):""}</div>
+    <h1 class="page-title">${esc(d.scenario||d.title||"Untitled")}</h1>
+    ${(d.part||d.title)?`<div class="page-chapter">${d.part?`<span class="part">Part ${esc(d.part)}</span>`:""}${(d.part&&d.title)?" · ":""}${d.title?esc(d.title):""}</div>`:""}
     <div class="page-sub">${esc(d.summary||"")}</div>
     <div class="prose">${md(d.body||"")}</div>`;
   $("#reader").classList.add("open"); $("#reader").setAttribute("aria-hidden","false");
@@ -399,6 +421,37 @@ function closeReader(){
 }
 $("#back").onclick = closeReader;
 addEventListener("keydown", e=>{ if(e.key==="Escape" && $("#reader").classList.contains("open")) closeReader(); });
+
+/* ================= markdown export ================= */
+function storyToMarkdown(d){
+  const fm = [
+    "---",
+    `story: ${d.scenario||""}`,
+    d.title ? `chapter: ${d.title}` : null,
+    d.part ? `part: ${d.part}` : null,
+    d.character ? `character: ${d.character}` : null,
+    `tags: [${(d.tags||[]).join(", ")}]`,
+    d.status ? `status: ${d.status}` : null,
+    d.date ? `date: ${d.date}` : null,
+    d.summary ? `summary: ${d.summary}` : null,
+    "---",
+    ""
+  ].filter(x=>x!==null).join("\n");
+  return fm + "\n" + (d.body||"");
+}
+function slugify(s){ return String(s||"story").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""); }
+$("#exportBtn").onclick = ()=>{
+  if(!current) return;
+  const md = storyToMarkdown(current);
+  const parts = [slugify(current.scenario)];
+  if(current.part) parts.push("part"+current.part);
+  if(current.title) parts.push(slugify(current.title));
+  const fname = parts.join("-") + ".md";
+  const blob = new Blob([md], {type:"text/markdown"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = fname; a.click();
+  URL.revokeObjectURL(a.href);
+};
 let saveT; $("#reader").addEventListener("scroll", ()=>{
   if(!current) return; clearTimeout(saveT);
   saveT = setTimeout(()=>localStorage.setItem("rr_pos_"+(current._file||current.title), $("#reader").scrollTop), 400);
