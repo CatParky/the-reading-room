@@ -13,8 +13,7 @@ jobs:
   manifest:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4.2.2
       - name: Build manifest.json
         run: |
           python3 - <<'EOF'
@@ -24,7 +23,6 @@ jobs:
               json.dump({"stories": files}, fh, indent=2)
           print(f"Manifest lists {len(files)} story file(s)")
           EOF
-
       - name: Commit manifest if changed
         run: |
           git config user.name "reading-room-bot"
