@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat MHTML to JSON Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 2rem;
+        }
+
+        .upload-section {
+            text-align: center;
+            padding: 3rem 2rem;
+            border: 3px dashed #cbd5e0;
+            border-radius: 12px;
+            background: #f7fafc;
+            transition: all 0.3s;
+        }
+
+        .upload-section.dragover {
+            background: #edf2f7;
+            border-color: #667eea;
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .upload-section h3 {
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+        }
+
+        .options-section {
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid #cbd5e0;
+            text-align: left;
+        }
+
+        .options-section label {
+            display: block;
+            color: #4a5568;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+        }
+
+        .options-section input[type="text"] {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #cbd5e0;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .checkbox-option {
+            margin-top: 0.75rem;
+        }
+
+        .checkbox-option label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-weight: normal;
+        }
+
+        .checkbox-option input[type="checkbox"] {
+            width: auto;
+            cursor: pointer;
+        }
+
+        .instructions {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: #f7fafc;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .instructions h3 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+        }
+
+        .instructions ol {
+            margin-left: 1.5rem;
+            color: #4a5568;
+            line-height: 1.8;
+        }
+
+        .instructions li {
+            margin-bottom: 0.5rem;
+        }
+
+        .instructions a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .instructions a:hover {
+            text-decoration: underline;
+        }
+
+        .help-text {
+            font-size: 0.8rem;
+            color: #718096;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+<nav style="display:flex;gap:1.2rem;align-items:center;background:#f6f1e7;padding:.8rem 1.4rem;border-radius:.6rem;margin-bottom:1.5rem;flex-wrap:wrap;font-family:'IBM Plex Mono',monospace">
+  <a href="landing.html" style="font-family:Georgia,serif;font-size:1.2rem;color:#2b2622;text-decoration:none;font-weight:500">The <em style="color:#7c2d2d">Refuge</em></a>
+  <span style="flex:1"></span>
+  <a href="landing.html" style="font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:#5e564c;text-decoration:none">Home</a>
+  <a href="pipeline.html" style="font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:#5e564c;text-decoration:none">Pipeline</a>
+  <a href="index.html" style="font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:#5e564c;text-decoration:none">Library</a>
+</nav>
+<p style="max-width:900px;margin:0 auto 1.5rem;background:#fff8e6;border:1px solid #e8d8a0;border-radius:.5rem;padding:.8rem 1rem;font-family:Georgia,serif;font-size:.9rem;color:#6b5d2f">Legacy tool — the Pipeline's Extract stage now handles MHTML directly. Kept for reference.</p>
+    <div class="container">
+        <div class="header">
+            <div style="text-align: left; margin-bottom: 1rem;">
+                <a href="landing.html" style="color: white; text-decoration: none; opacity: 0.9; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                    ← Back to The Refuge
+                </a>
+            </div>
+            <h1>💜 Chat MHTML to JSON Converter</h1>
+            <p>Convert saved chat exports for use with Story Extractor</p>
+            <p style="font-size: 0.85rem; margin-top: 0.5rem; opacity: 0.8;">Version 2.2 • 13 July 2026</p>
+        </div>
+
+        <div class="content">
+            <div class="instructions">
+                <h3>📋 How to Use</h3>
+                <ol>
+                    <li>Save your chat page as MHTML (File → Save Page As → Webpage, Single File)</li>
+                    <li><strong>Required:</strong> Enter the character names EXACTLY as they appear in the chat</li>
+                    <li>Drop the .mhtml file below or click "Choose File"</li>
+                    <li>The converted JSON will download automatically</li>
+                    <li>Upload the JSON to <a href="https://catparky.github.io/universal-story-export/index.html" target="_blank">Story Extractor</a></li>
+                </ol>
+                <p style="margin-top: 1rem; padding: 0.75rem; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; color: #856404;">
+                    <strong>💡 How the Name Fields Work:</strong><br>
+                    • <strong>Character Name</strong> - copy EXACTLY from your chat (used for matching)<br>
+                    • <strong>Show Name As</strong> - clean version for the JSON output (optional)<br><br>
+                    <strong>Examples:</strong><br>
+                    • Match: "💜 Gale Dekarios [Only One Bed]" → Show As: "Gale Dekarios"<br>
+                    • Match: "River 'Riv'" → Show As: "Riv High-Hill"<br>
+                    • Match: "Theo" → Show As: "Theo Stirling"
+                </p>
+            </div>
+
+            <div class="upload-section" id="uploadSection">
+                <div class="options-section" style="margin-bottom: 1.5rem;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <label><strong>Assistant Character Name *</strong> (for matching)</label>
+                            <input type="text" id="assistantName" placeholder="e.g., Theo, 💜 Gale" required>
+                            <p class="help-text">Copy from chat EXACTLY</p>
+                        </div>
+                        <div>
+                            <label><strong>Show Name As</strong> (clean output)</label>
+                            <input type="text" id="assistantDisplayName" placeholder="e.g., Gale Dekarios">
+                            <p class="help-text">Clean name for JSON (optional)</p>
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div>
+                            <label><strong>Your Character Name *</strong> (for matching)</label>
+                            <input type="text" id="userName" placeholder="e.g., River 'Riv'" required>
+                            <p class="help-text">Copy from chat EXACTLY</p>
+                        </div>
+                        <div>
+                            <label><strong>Show Name As</strong> (clean output)</label>
+                            <input type="text" id="userDisplayName" placeholder="e.g., Riv High-Hill">
+                            <p class="help-text">Clean name for JSON (optional)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="upload-icon">📁</div>
+                <h3>Drop your chat MHTML file here</h3>
+                <p style="margin: 1rem 0; color: #718096;">or</p>
+                <button class="btn" onclick="document.getElementById('fileInput').click()">Choose File</button>
+                <input type="file" id="fileInput" accept=".mhtml,.mht">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const uploadSection = document.getElementById('uploadSection');
+        const fileInput = document.getElementById('fileInput');
+
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('dragover');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                processFile(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                processFile(e.target.files[0]);
+            }
+        });
+
+        function decodeQuotedPrintable(text) {
+            // Remove soft line breaks ONLY (=\r\n). Do NOT strip following
+            // whitespace - the leading space on the next line is real content
+            // (previously caused words to run together, e.g. "werea").
+            text = text.replace(/=\r?\n/g, '');
+            // Decode =XX sequences to BYTES, then decode the byte stream as
+            // UTF-8. Decoding each byte with String.fromCharCode produced
+            // mojibake for multi-byte characters (apostrophes, dashes, etc).
+            const bytes = [];
+            for (let i = 0; i < text.length; i++) {
+                if (text[i] === '=' && /^[0-9A-Fa-f]{2}$/.test(text.substr(i + 1, 2))) {
+                    bytes.push(parseInt(text.substr(i + 1, 2), 16));
+                    i += 2;
+                } else {
+                    bytes.push(text.charCodeAt(i) & 0xFF);
+                }
+            }
+            return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
+        }
+
+        function decodeHTML(text) {
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = text;
+            return textarea.value;
+        }
+
+        function fixWin1252Artifacts(text) {
+            // Map Windows-1252 control code artifacts to proper Unicode punctuation
+            // CRITICAL: Must be called BEFORE stripping control characters
+            return text
+                // Em dash + control code + punctuation combinations
+                .replace(/\u2014\u0080\u009c/g, '\u201c')    // —\u0080\u009c → " (left double quote)
+                .replace(/\u2014\u0080\u009d/g, '\u201d')    // —\u0080\u009d → " (right double quote)
+                .replace(/\u2014\u0080\u0099/g, '\u2019')    // —\u0080\u0099 → ' (right single quote/apostrophe)
+                .replace(/\u2014\u0080\u0098/g, '\u2018')    // —\u0080\u0098 → ' (left single quote)
+                .replace(/\u2014\u0080\u0085/g, '\u2026')    // —\u0080\u0085 → … (ellipsis)
+                .replace(/\u2014\u0080\u00a6/g, '\u2026')    // —\u0080¦ → … (broken ellipsis)
+                // Standalone control code artifacts (without em dash)
+                .replace(/\u0084/g, '\u201e')                // „ (low double quote)
+                .replace(/\u0091/g, '\u2018')                // ' (left single quote)
+                .replace(/\u0092/g, '\u2019')                // ' (right single quote)
+                .replace(/\u0093/g, '\u201c')                // " (left double quote)
+                .replace(/\u0094/g, '\u201d')                // " (right double quote)
+                .replace(/\u0085/g, '\u2026');               // … (ellipsis)
+        }
+
+        function cleanTitle(title) {
+            // Remove ALL non-ASCII characters (catches malformed emojis)
+            title = title.replace(/[^\x20-\x7E]/g, '');
+            // Remove brackets and their content  
+            title = title.replace(/\s*\[.*?\]\s*/g, '');
+            // Clean up extra spaces
+            title = title.trim().replace(/\s+/g, ' ');
+            return title;
+        }
+
+        function processFile(file) {
+            // Validate required fields
+            const assistantName = document.getElementById('assistantName').value.trim();
+            const userName = document.getElementById('userName').value.trim();
+            
+            if (!assistantName || !userName) {
+                alert('Please enter both character names before uploading the file.\n\nCopy them exactly as they appear in your chat!');
+                return;
+            }
+            
+            // Get display names (optional - defaults to match names if not provided)
+            const assistantDisplayName = document.getElementById('assistantDisplayName').value.trim() || assistantName;
+            const userDisplayName = document.getElementById('userDisplayName').value.trim() || userName;
+            
+            console.log('Match names:', { assistantName, userName });
+            console.log('Display names:', { assistantDisplayName, userDisplayName });
+            
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    // Read as ArrayBuffer and decode with proper UTF-8
+                    const bytes = new Uint8Array(e.target.result);
+                    const decoder = new TextDecoder('utf-8');
+                    let content = decoder.decode(bytes);
+                    
+                    console.log('File loaded, size:', content.length);
+                    
+                    const assistantName = document.getElementById('assistantName').value.trim();
+                    const userName = document.getElementById('userName').value.trim();
+                    console.log('Assistant name:', assistantName || '(auto-detect)');
+                    console.log('User name:', userName || '(auto-detect)');
+                    
+                    // Extract title
+                    let title = 'Conversation';
+                    const subjectMatch = content.match(/Subject:\s*(.+?)(?:\r?\n(?!\s))/s);
+                    if (subjectMatch) {
+                        let rawSubject = subjectMatch[1];
+                        rawSubject = rawSubject.replace(/=\?[^?]+\?[QB]\?([^?]+)\?=/gi, (match, encoded) => {
+                            encoded = encoded.replace(/=\r?\n\s*/g, '');
+                            return decodeQuotedPrintable(encoded);
+                        });
+                        rawSubject = rawSubject.replace(/\r?\n\s*/g, '');
+                        title = rawSubject
+                            .replace(/\s*\|\s*\d+\s*memories.*$/i, '')
+                            .replace(/\s*\|\s*\d+\s*interactions.*$/i, '')
+                            .trim();
+                        title = cleanTitle(title);
+                    }
+                    
+                    // If we have a clean display name, use it in the title
+                    if (assistantDisplayName && assistantDisplayName !== assistantName) {
+                        // Replace the assistant name in the title with the display name
+                        const cleanedAssistant = cleanTitle(assistantName);
+                        if (title.includes(cleanedAssistant)) {
+                            title = title.replace(cleanedAssistant, assistantDisplayName);
+                        } else {
+                            // If cleaned version doesn't match, just use display name
+                            title = assistantDisplayName;
+                        }
+                    }
+                    
+                    console.log('Title:', title);
+                    
+                    // Find HTML and decode
+                    const htmlStartIndex = content.indexOf('<!DOCTYPE html>');
+                    if (htmlStartIndex === -1) {
+                        alert('Error: Could not find HTML content in MHTML file');
+                        return;
+                    }
+                    console.log('Found HTML at index:', htmlStartIndex);
+                    
+                    content = content.substring(htmlStartIndex);
+                    content = decodeQuotedPrintable(content);
+                    console.log('Decoded content length:', content.length);
+                    
+                    // ============================================================
+                    // NEW ROW-BASED EXTRACTION (CrushOn 2026 layout)
+                    // Each message lives in <div data-id="<uuid>" ...>.
+                    // Assistant rows: right padding (pr-11) + character name span.
+                    // User rows: right-aligned (justify-end / items-end / pl-11),
+                    // NO name span - only an avatar <img alt="...">.
+                    // ============================================================
+                    const messageBlocks = [];
+                    const uuidRe = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/;
+                    const rowSplit = content.split(/(?=<div data-id=")/);
+                    const msgRows = rowSplit.filter(r => {
+                        const m = r.match(/^<div data-id="([^"]+)"/);
+                        return m && uuidRe.test(m[1]);
+                    });
+                    console.log(`Found ${msgRows.length} data-id message rows`);
+
+                    function cleanMessageText(rawHtml) {
+                        let text = rawHtml.replace(/<[^>]+>/g, '');
+                        text = decodeHTML(text);
+                        text = fixWin1252Artifacts(text);
+                        text = text.replace(/[\u0080-\u009F]/g, '');
+                        text = text.replace(/\s+/g, ' ');
+                        return text.trim();
+                    }
+
+                    const paraRe = /<p class="mb-1 break-words"[^>]*>([\s\S]*?)<\/p>/g;
+
+                    if (msgRows.length > 0) {
+                        const assistantSpanRe = new RegExp('<span>\\s*' +
+                            assistantName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+                            '\\s*</span>', 'i');
+
+                        for (const row of msgRows) {
+                            const paras = [...row.matchAll(paraRe)].map(m => cleanMessageText(m[1])).filter(t => t.length > 0);
+                            if (paras.length === 0) continue;
+
+                            // Inspect only the row header (before the message body)
+                            // so we don't false-match on message content.
+                            const head = row.substring(0, 1500);
+                            let isAssistant;
+                            if (assistantSpanRe.test(head) || head.includes('pr-11')) {
+                                isAssistant = true;
+                            } else if (head.includes('justify-end') || head.includes('items-end') || head.includes('pl-11')) {
+                                isAssistant = false;
+                            } else {
+                                isAssistant = false; // unnamed rows are user messages
+                            }
+
+                            messageBlocks.push({
+                                speaker: isAssistant ? 'assistant' : 'user',
+                                displayName: isAssistant ? assistantDisplayName : userDisplayName,
+                                text: paras.join('\n\n'),
+                                originalSpeaker: isAssistant ? assistantName : '(user row)'
+                            });
+                        }
+                        console.log(`Row-based extraction produced ${messageBlocks.length} messages`);
+                    }
+
+                    // ============================================================
+                    // LEGACY FALLBACK (pre-2026 layout with speaker <span> tags)
+                    // ============================================================
+                    if (messageBlocks.length === 0) {
+                        console.log('Row-based extraction found nothing - falling back to legacy speaker-tag method');
+                        const speakerPattern = /<span>([^<]+)<\/span>/g;
+                        const speakerPositions = [];
+                        let match;
+
+                        while ((match = speakerPattern.exec(content)) !== null) {
+                            const speaker = match[1].trim();
+
+                            if (speaker.includes('Term') || speaker.includes('Policy') ||
+                                speaker.includes('Guidelines') || speaker.includes('Program') ||
+                                speaker.includes('Chat') || speaker.includes('Upgrade') ||
+                                speaker.includes('Current') || speaker.includes('Continue') ||
+                                speaker.includes('Plan') || speaker.includes('Setting') ||
+                                speaker.includes('Detail') || speaker.includes('Edit') ||
+                                speaker.includes('Memory') || speaker.includes('Memories') ||
+                                speaker.includes('Summarize') || speaker.includes('Pinned') ||
+                                speaker.includes('Unfiltered') || speaker.includes('Rec.') ||
+                                speaker.includes('Scene') || speaker.includes('Instruction') ||
+                                speaker.includes('Voice') || speaker.includes('Group') ||
+                                speaker.includes('Medium') || speaker.includes('High') ||
+                                speaker.includes('Save') || speaker.includes('View')) {
+                                continue;
+                            }
+                            if (speaker.length > 80) continue;
+                            if (speaker.length <= 2 || /^\d+\/\d+$/.test(speaker) ||
+                                speaker.includes('8K') || speaker.includes('Flash') ||
+                                speaker.includes('Gemini') || speaker.includes('Ultra') ||
+                                speaker.includes('DS R') || speaker.includes('Tau') ||
+                                speaker.includes('loaded')) {
+                                continue;
+                            }
+
+                            const hasMarkers = speaker.includes('\u{1F49C}') || speaker.includes('[') ||
+                                              speaker.includes("'") || speaker.includes('"');
+                            const isReasonableName = speaker.length >= 3 && speaker.length <= 40 &&
+                                                    /^[A-Z]/.test(speaker);
+
+                            if (hasMarkers || isReasonableName) {
+                                speakerPositions.push({
+                                    speaker: speaker,
+                                    matchStart: match.index
+                                });
+                            }
+                        }
+
+                        const allMessages = [...content.matchAll(paraRe)];
+                        for (const msgMatch of allMessages) {
+                            const msgPos = msgMatch.index;
+                            let closestSpeaker = null;
+                            let closestDistance = Infinity;
+                            for (const sp of speakerPositions) {
+                                if (sp.matchStart < msgPos) {
+                                    const distance = msgPos - sp.matchStart;
+                                    if (distance < closestDistance && distance < 5000) {
+                                        closestDistance = distance;
+                                        closestSpeaker = sp.speaker;
+                                    }
+                                }
+                            }
+
+                            const text = cleanMessageText(msgMatch[1]);
+                            if (text.length === 0) continue;
+
+                            let isAssistant = false;
+                            if (closestSpeaker) {
+                                const speakerLower = closestSpeaker.toLowerCase();
+                                const assistantLower = assistantName.toLowerCase();
+                                if (speakerLower.includes(assistantLower) || assistantLower.includes(speakerLower)) {
+                                    isAssistant = true;
+                                }
+                            }
+
+                            messageBlocks.push({
+                                speaker: isAssistant ? 'assistant' : 'user',
+                                displayName: isAssistant ? assistantDisplayName : userDisplayName,
+                                text: text,
+                                originalSpeaker: closestSpeaker || '(no tag)'
+                            });
+                        }
+                    }
+
+                    if (messageBlocks.length === 0) {
+                        alert('Error: No messages found. The MHTML format may not be supported.\n\nCheck the console (F12) for details.');
+                        return;
+                    }
+
+                    console.log(`Extracted ${messageBlocks.length} individual messages`);
+                    
+                    // GROUP consecutive messages from the same speaker into turns
+                    const groupedBlocks = [];
+                    let currentGroup = null;
+                    
+                    for (let block of messageBlocks) {
+                        if (!currentGroup || currentGroup.speaker !== block.speaker) {
+                            // Start new group
+                            if (currentGroup) {
+                                groupedBlocks.push(currentGroup);
+                            }
+                            currentGroup = {
+                                speaker: block.speaker,
+                                displayName: block.displayName,
+                                text: block.text,
+                                originalSpeaker: block.originalSpeaker
+                            };
+                        } else {
+                            // Add to current group (multi-paragraph turn)
+                            currentGroup.text += '\n\n' + block.text;
+                        }
+                    }
+                    // Don't forget the last group
+                    if (currentGroup) {
+                        groupedBlocks.push(currentGroup);
+                    }
+                    
+                    console.log(`Grouped into ${groupedBlocks.length} multi-paragraph turns`);
+                    
+                    if (groupedBlocks.length === 0) {
+                        alert('No conversation turns could be created. Check console (F12) for details.');
+                        return;
+                    }
+                    
+                    // Build turns by walking messages in DISPLAY ORDER.
+                    // The JSON schema is {user_prompt, model_responses} - a turn
+                    // always starts with the user. We do NOT swap or reverse:
+                    // the message sequence is already chronological.
+                    //
+                    // If the chat opens with the character (a greeting, as CrushOn
+                    // does), that greeting is emitted as its own turn with an empty
+                    // user_prompt, so it stays FIRST and everything after it lines
+                    // up correctly. Previously the "swap" logic paired the greeting
+                    // with the following user message, which shifted every reply out
+                    // of step and made conversations read backwards.
+                    const turns = [];
+
+                    let i = 0;
+                    // Leading character greeting(s) with no preceding user message.
+                    while (i < groupedBlocks.length && groupedBlocks[i].speaker === 'assistant') {
+                        turns.push({
+                            conversation_id: '',
+                            creation_timestamp: turns.length,
+                            user_id: '',
+                            user_prompt: '',
+                            model_responses: [groupedBlocks[i].text],
+                            model_thoughts: [],
+                            update_timestamp: String(turns.length),
+                            attachments: []
+                        });
+                        console.log(`Turn ${turns.length - 1}: (opening character greeting)`);
+                        i++;
+                    }
+
+                    // Remaining messages: pair each user message with the assistant
+                    // reply that follows it. Consecutive same-speaker blocks are
+                    // already merged, so alternation holds - but we guard anyway.
+                    for (; i < groupedBlocks.length; i++) {
+                        const current = groupedBlocks[i];
+
+                        if (current.speaker === 'user') {
+                            const next = groupedBlocks[i + 1];
+                            const assistantMsg = (next && next.speaker === 'assistant') ? next.text : '';
+                            turns.push({
+                                conversation_id: '',
+                                creation_timestamp: turns.length,
+                                user_id: '',
+                                user_prompt: current.text,
+                                model_responses: assistantMsg ? [assistantMsg] : [],
+                                model_thoughts: [],
+                                update_timestamp: String(turns.length),
+                                attachments: []
+                            });
+                            console.log(`Turn ${turns.length - 1}: user${assistantMsg ? '\u2192assistant' : ' (no reply)'}`);
+                            if (assistantMsg) i++;
+                        } else {
+                            // An assistant block with no preceding user (mid-chat) -
+                            // attach it to the previous turn rather than dropping it.
+                            if (turns.length > 0) {
+                                turns[turns.length - 1].model_responses.push(current.text);
+                                console.log(`Turn ${turns.length - 1}: +extra assistant block`);
+                            }
+                        }
+                    }
+                    
+                    console.log(`Created ${turns.length} turns`);
+                    
+                    if (turns.length === 0) {
+                        alert('No conversation turns could be created. Check console (F12) for details.');
+                        return;
+                    }
+                    
+                    // Create conversation object
+                    const conversation = {
+                        conversation: {
+                            title: title,
+                            creation_timestamp: Math.floor(Date.now() / 1000),
+                            update_timestamp: Math.floor(Date.now() / 1000),
+                            token_count: 'N/A'
+                        },
+                        turns: turns
+                    };
+                    
+                    console.log('Creating JSON...');
+                    
+                    // Download JSON
+                    const jsonStr = JSON.stringify(conversation, null, 2);
+                    const blob = new Blob([jsonStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = title.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.json';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    
+                    URL.revokeObjectURL(url);
+                    
+                    console.log('Download triggered');
+                    
+                    // Success message
+                    document.getElementById('uploadSection').innerHTML = `
+                        <div class="upload-icon">✅</div>
+                        <h3>Conversion Complete!</h3>
+                        <p style="color: #48bb78; margin: 1rem 0;">
+                            Successfully converted ${turns.length} conversation turns
+                        </p>
+                        <p style="color: #718096; margin-bottom: 1rem;">
+                            Title: ${title}
+                        </p>
+                        <button class="btn" onclick="location.reload()">Convert Another</button>
+                    `;
+                    
+                } catch (error) {
+                    console.error('Error during processing:', error);
+                    alert('Error during conversion: ' + error.message + '\n\nCheck console (F12) for details.');
+                }
+            };
+            
+            reader.onerror = function(error) {
+                console.error('Error reading file:', error);
+                alert('Error reading file: ' + error);
+            };
+            
+            reader.readAsArrayBuffer(file);  // Read as binary to avoid encoding issues
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Story Extractor - JSON Parser</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+            color: #2d3748;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .content {
+            padding: 2rem;
+        }
+
+        .upload-section {
+            border: 3px dashed #cbd5e0;
+            border-radius: 12px;
+            padding: 3rem;
+            text-align: center;
+            background: #f3e8ff;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-section:hover {
+            border-color: #667eea;
+            background: #ede9fe;
+        }
+
+        .upload-section.dragover {
+            border-color: #667eea;
+            background: #e6fffa;
+            transform: scale(1.02);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.6;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Georgia', serif;
+            margin: 0.5rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f3e8ff 0%, #ede9fe 100%);
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid #e9d5ff;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #718096;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .results {
+            margin-top: 2rem;
+        }
+
+        .turn-item {
+            background: #f3e8ff;
+            border-left: 4px solid #667eea;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .turn-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateX(4px);
+        }
+
+        .turn-header {
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .turn-number {
+            background: #667eea;
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .turn-number:hover {
+            background: #764ba2;
+            transform: scale(1.05);
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #4a5568;
+            margin: 1rem 0 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .user-prompt, .model-response {
+            background: white;
+            padding: 1rem;
+            border-radius: 6px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            border: 1px solid #e2e8f0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            display: none;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .export-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+
+        .filters {
+            background: #ede9fe;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-row label {
+            font-weight: bold;
+            color: #4a5568;
+        }
+
+        .filter-row input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .response-multiple {
+            margin-top: 0.5rem;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .modal-header h2 {
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+        }
+
+        .conversation-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .conversation-item {
+            background: #f3e8ff;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .conversation-item:hover {
+            border-color: #667eea;
+            transform: translateX(4px);
+        }
+
+        .conversation-item.selected {
+            border-color: #667eea;
+            background: #ede9fe;
+        }
+
+        .conversation-name {
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 0.3rem;
+        }
+
+        .conversation-meta {
+            font-size: 0.85rem;
+            color: #718096;
+        }
+
+        .modal-footer {
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 2px solid #e2e8f0;
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div style="text-align: left; margin-bottom: 1rem;">
+                <a href="landing.html" style="color: white; text-decoration: none; opacity: 0.9; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                    ← Back to The Refuge
+                </a>
+            </div>
+            <h1>📖 Story Extractor</h1>
+            <p>Extract user prompts and model responses from your JSON conversations</p>
+            <p style="font-size: 0.85rem; margin-top: 0.5rem; opacity: 0.7;">Version 2.5 • Updated 4 May 2026</p>
+            <p style="font-size: 0.8rem; margin-top: 0.3rem; opacity: 0.6;">
+                Supports: Claude Official (single & bulk), Nessie Labs, Claude Exporter, Markdown exports
+            </p>
+        </div>
+
+        <div class="content">
+            <!-- Instructions Section -->
+            <div style="background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.5rem; margin: 1.5rem; margin-bottom: 2rem;">
+                <h3 style="color: #2d3748; margin-bottom: 1rem; font-size: 1.1rem;">📋 How to Export Your Claude Conversations</h3>
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="color: #4a5568; margin-bottom: 0.5rem; font-size: 1rem;">Method 1: GitHub Browser Script (Recommended)</h4>
+                    <p style="color: #718096; margin-bottom: 0.5rem; line-height: 1.6;">Export individual conversations as Markdown files:</p>
+                    <ol style="color: #4a5568; margin-left: 1.5rem; line-height: 1.8;">
+                        <li>Go to <a href="https://github.com/CatParky/claude-chat-exporter" target="_blank" style="color: #667eea; text-decoration: none; font-weight: 600;">github.com/CatParky/claude-chat-exporter</a></li>
+                        <li>Click on <code style="background: #e2e8f0; padding: 0.2rem 0.4rem; border-radius: 3px;">claude-chat-exporter.js</code></li>
+                        <li>Copy all the code (click "Copy raw file" button)</li>
+                        <li>Open your Claude conversation in claude.ai</li>
+                        <li>Press <strong>F12</strong> (or Cmd+Option+J on Mac) to open Developer Console</li>
+                        <li>Paste the script in the Console tab and press Enter</li>
+                        <li>Your conversation will download as a .md file!</li>
+                    </ol>
+                    <p style="color: #718096; margin-top: 0.5rem; font-size: 0.85rem; font-style: italic;">
+                        💡 This is a personal fork for reliability. Original script: <a href="https://github.com/agarwalvishal/claude-chat-exporter" target="_blank" style="color: #667eea; text-decoration: none;">agarwalvishal/claude-chat-exporter</a>
+                    </p>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="color: #4a5568; margin-bottom: 0.5rem; font-size: 1rem;">Method 2: Claude Official Export</h4>
+                    <p style="color: #718096; margin-bottom: 0.5rem; line-height: 1.6;">Export all your conversations at once:</p>
+                    <ol style="color: #4a5568; margin-left: 1.5rem; line-height: 1.8;">
+                        <li>Go to Settings → Privacy in Claude.ai</li>
+                        <li>Click "Export data"</li>
+                        <li>Wait for email with download link</li>
+                        <li>Download the ZIP file</li>
+                        <li>Extract and upload individual JSON files here</li>
+                    </ol>
+                </div>
+
+                <div>
+                    <h4 style="color: #4a5568; margin-bottom: 0.5rem; font-size: 1rem;">Method 3: Browser Extensions</h4>
+                    <p style="color: #718096; line-height: 1.6;">
+                        Install extensions like <a href="https://chromewebstore.google.com/detail/ai-chat-exporter-save-cla/elhmfakncmnghlnabnolalcjkdpfjnin" target="_blank" style="color: #667eea; text-decoration: none;">AI Chat Exporter</a> for one-click exports to PDF, Markdown, or JSON.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="upload-section" id="uploadSection">
+                <div class="upload-icon">📁</div>
+                <h2>Drop your JSON or Markdown file here</h2>
+                <p style="margin: 1rem 0; color: #718096;">or</p>
+                <input type="file" id="fileInput" accept=".json,.md">
+                <label for="fileInput" class="btn">Choose File</label>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Processing your conversation...</p>
+            </div>
+
+            <div id="statsSection" style="display: none;">
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalTurns">0</div>
+                        <div class="stat-label">Total Turns</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="conversationTitle">-</div>
+                        <div class="stat-label">Conversation</div>
+                    </div>
+                </div>
+
+                <div class="filters">
+                    <div class="filter-row">
+                        <label>
+                            <input type="checkbox" id="showPrompts" checked> Show User
+                        </label>
+                        <label>
+                            <input type="checkbox" id="showResponses" checked> Show Assistant
+                        </label>
+                    </div>
+                    <div class="filter-row" style="margin-top: 1rem;">
+                        <label style="margin-right: 0.5rem;">Character Names:</label>
+                        <input type="text" id="userCharacterName" placeholder="User character (e.g., Riv)" value="Riv" style="padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px; width: 150px; margin-right: 1rem;">
+                        <input type="text" id="assistantCharacterName" placeholder="Assistant character (e.g., Gale)" value="Gale" style="padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px; width: 150px;">
+                    </div>
+                    <div class="filter-row" style="margin-top: 1rem;">
+                        <label style="margin-right: 0.5rem;">Export Filename:</label>
+                        <input type="text" id="customChatName" placeholder="Auto-detected from conversation" style="padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px; flex: 1; max-width: 400px;">
+                    </div>
+                    <div class="filter-row" style="margin-top: 1rem;">
+                        <label style="margin-right: 0.5rem;">Jump to Turn:</label>
+                        <input type="number" id="jumpToTurn" min="1" placeholder="Enter turn number" style="padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px; width: 150px;">
+                        <button class="btn" onclick="jumpToTurn()" style="padding: 0.5rem 1rem; margin: 0 0 0 0.5rem;">Go</button>
+                    </div>
+                    <div style="margin-top: 1.5rem; border: 1px solid #cbd5e0; border-radius: 8px; padding: 1rem; background: #f7fafc;">
+                        <label style="display: block; margin-bottom: 0.75rem; font-weight: bold;">
+                            <input type="checkbox" id="includeFrontmatter" checked> Include Reading Room frontmatter
+                        </label>
+                        <div class="filter-row" style="margin-bottom: 0.75rem;">
+                            <input type="text" id="fmScenario" placeholder="Scenario (e.g., Thaw)" style="padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px; width: 180px; margin-right: 1rem;">
+                            <input type="text" id="fmTags" placeholder="Tags (comma separated)" style="padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px; width: 260px; margin-right: 1rem;">
+                            <input type="text" id="fmStatus" placeholder="Status (e.g., complete)" value="complete" style="padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px; width: 160px;">
+                        </div>
+                        <div class="filter-row" style="margin-bottom: 0.75rem;">
+                            <input type="text" id="fmSummary" placeholder="Summary — one line, shown on the shelf" style="padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px; flex: 1; max-width: 600px;">
+                        </div>
+                        <div class="filter-row">
+                            <label style="margin-right: 0.5rem;">Export from turn:</label>
+                            <input type="number" id="startFromTurn" min="1" value="1" style="padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px; width: 100px;">
+                            <span style="margin-left: 0.75rem; color: #718096; font-size: 0.85rem;">Skip setup/briefing turns — e.g. 2 starts the story at your second message</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="export-buttons">
+                    <button class="btn" onclick="exportAsText()">📄 Export as Text</button>
+                    <button class="btn" onclick="exportAsMarkdown()">📝 Export as Markdown</button>
+                    <button class="btn" onclick="exportAsText(true)">📑 Export Split (50 turns each)</button>
+                    <button class="btn" onclick="exportAsJSON()">💾 Export as JSON</button>
+                    <button class="btn" onclick="copyToClipboard()">📋 Copy All to Clipboard</button>
+                </div>
+            </div>
+
+            <div class="results" id="results"></div>
+        </div>
+    </div>
+
+    <!-- Conversation Selection Modal -->
+    <div class="modal" id="conversationModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Select a Conversation</h2>
+                <p style="color: #718096; font-size: 0.9rem;">This file contains multiple conversations. Choose one to extract:</p>
+                <input type="text" id="conversationFilter" value="RP" placeholder="Filter by name prefix (clear to show all)" oninput="renderConversationList()" style="margin-top: 0.75rem; padding: 0.5rem; border: 1px solid #cbd5e0; border-radius: 4px; width: 100%; font-family: inherit;">
+            </div>
+            <div class="conversation-list" id="conversationList"></div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeConversationModal()">Cancel</button>
+                <button class="btn" onclick="loadSelectedConversation()">Load Conversation</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let conversationData = null;
+        let bulkConversationsData = null;
+        let selectedConversationIndex = null;
+
+        const uploadSection = document.getElementById('uploadSection');
+        const fileInput = document.getElementById('fileInput');
+        const loading = document.getElementById('loading');
+        const statsSection = document.getElementById('statsSection');
+        const results = document.getElementById('results');
+
+        // Drag and drop handlers
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('dragover');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type === 'application/json') {
+                handleFile(file);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        });
+
+        // Filter handlers
+        document.getElementById('showPrompts').addEventListener('change', renderResults);
+        document.getElementById('showResponses').addEventListener('change', renderResults);
+        
+        // Update display when character names change
+        document.getElementById('userCharacterName').addEventListener('input', renderResults);
+        document.getElementById('assistantCharacterName').addEventListener('input', renderResults);
+
+        function handleFile(file) {
+            loading.classList.add('active');
+            uploadSection.style.display = 'none';
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const content = e.target.result;
+                    
+                    // Check if it's a markdown file
+                    if (file.name.endsWith('.md')) {
+                        conversationData = parseMarkdown(content, file.name);
+                        displayResults();
+                        loading.classList.remove('active');
+                        statsSection.style.display = 'block';
+                    } else {
+                        // It's JSON
+                        const rawData = JSON.parse(content);
+                        conversationData = normalizeFormat(rawData);
+                        
+                        // If normalizeFormat returns null, it means we're showing conversation selector
+                        if (conversationData === null) {
+                            return; // Modal is now showing, wait for user selection
+                        }
+                        
+                        displayResults();
+                        loading.classList.remove('active');
+                        statsSection.style.display = 'block';
+                    }
+                } catch (error) {
+                    alert('Error parsing file: ' + error.message);
+                    loading.classList.remove('active');
+                    uploadSection.style.display = 'block';
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        function parseMarkdown(content, filename) {
+            // Parse GitHub script markdown format
+            const lines = content.split('\n');
+            const turns = [];
+            let currentTurn = null;
+            let currentRole = null;
+            let currentText = '';
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                
+                // Detect speaker headers: "## Human (timestamp):" or "## Claude:"
+                if (line.startsWith('## Human') || line.startsWith('## Claude')) {
+                    // Save previous message if exists
+                    if (currentTurn && currentText.trim()) {
+                        if (currentRole === 'user') {
+                            currentTurn.user_prompt = currentText.trim();
+                        } else if (currentRole === 'assistant') {
+                            currentTurn.model_responses = [currentText.trim()];
+                            turns.push(currentTurn);
+                            currentTurn = null;
+                        }
+                    }
+                    
+                    // Start new message
+                    if (line.startsWith('## Human')) {
+                        currentRole = 'user';
+                        currentTurn = {
+                            conversation_id: '',
+                            creation_timestamp: turns.length,
+                            user_id: '',
+                            user_prompt: '',
+                            model_responses: [],
+                            model_thoughts: [],
+                            update_timestamp: turns.length,
+                            attachments: []
+                        };
+                        currentText = '';
+                    } else {
+                        currentRole = 'assistant';
+                        currentText = '';
+                    }
+                } else if (line === '---') {
+                    // Separator - ignore
+                    continue;
+                } else if (currentRole) {
+                    // Accumulate message text
+                    if (currentText || line.trim()) { // Start accumulating after first non-empty line
+                        currentText += (currentText ? '\n' : '') + line;
+                    }
+                }
+            }
+            
+            // Save last message
+            if (currentTurn && currentText.trim()) {
+                if (currentRole === 'user') {
+                    currentTurn.user_prompt = currentText.trim();
+                } else if (currentRole === 'assistant') {
+                    currentTurn.model_responses = [currentText.trim()];
+                    turns.push(currentTurn);
+                }
+            }
+            
+            // Extract title from filename
+            const title = filename.replace('.md', '').replace(/_/g, ' ');
+            
+            return {
+                conversation: {
+                    title: title,
+                    creation_timestamp: 0,
+                    update_timestamp: 0,
+                    token_count: 'N/A'
+                },
+                turns: turns
+            };
+        }
+
+        function normalizeFormat(data) {
+            // Detect format and normalize to standard structure
+            
+            // Format 1: Official Claude format (has "turns" array)
+            if (data.turns && Array.isArray(data.turns)) {
+                return data;
+            }
+            
+            // Format 2: Claude Exporter format (has "messages" array with role/say)
+            if (data.messages && Array.isArray(data.messages)) {
+                return {
+                    conversation: {
+                        title: data.metadata?.title || 'Untitled',
+                        creation_timestamp: new Date(data.metadata?.dates?.created).getTime() / 1000 || 0,
+                        update_timestamp: new Date(data.metadata?.dates?.updated).getTime() / 1000 || 0,
+                        token_count: 'N/A'
+                    },
+                    turns: convertMessagesToTurns(data.messages)
+                };
+            }
+            
+            // Format 3: Claude Bulk Export (array of conversations with chat_messages)
+            if (Array.isArray(data) && data.length > 0 && data[0].chat_messages) {
+                // This is a bulk export - show conversation selector
+                showConversationSelector(data);
+                return null; // Don't process yet, wait for user selection
+            }
+            
+            // Unknown format
+            throw new Error('Unrecognized JSON format. Expected Claude official, Nessie Labs, Claude Exporter, or Claude bulk export format.');
+        }
+
+        function convertMessagesToTurns(messages) {
+            const turns = [];
+            let currentTurn = null;
+            
+            messages.forEach((msg, index) => {
+                if (msg.role === 'Prompt') {
+                    // Start a new turn with user prompt
+                    currentTurn = {
+                        conversation_id: '',
+                        creation_timestamp: index,
+                        user_id: '',
+                        user_prompt: fixEncoding(msg.say),
+                        model_responses: [],
+                        model_thoughts: [],
+                        update_timestamp: index,
+                        attachments: []
+                    };
+                } else if (msg.role === 'Response' && currentTurn) {
+                    // Add response to current turn
+                    // Remove "Thought:" prefix if present
+                    let responseText = msg.say;
+                    if (responseText.includes('Thought:')) {
+                        // Extract just the response part after thought
+                        const parts = responseText.split('\n\n\n');
+                        responseText = parts.slice(1).join('\n\n\n').trim();
+                    }
+                    currentTurn.model_responses.push(fixEncoding(responseText));
+                    turns.push(currentTurn);
+                    currentTurn = null;
+                }
+            });
+            
+            // Handle case where last turn doesn't have a response
+            if (currentTurn) {
+                turns.push(currentTurn);
+            }
+            
+            return turns;
+        }
+
+        function showConversationSelector(conversations) {
+            bulkConversationsData = conversations;
+            renderConversationList();
+            document.getElementById('conversationModal').classList.add('active');
+            loading.classList.remove('active');
+        }
+
+        function renderConversationList() {
+            const list = document.getElementById('conversationList');
+            const filter = (document.getElementById('conversationFilter')?.value || '').trim().toUpperCase();
+
+            list.innerHTML = '';
+            selectedConversationIndex = null;
+
+            bulkConversationsData.forEach((conv, index) => {
+                const name = conv.name || conv.summary?.split('\n')[0] || 'Untitled Conversation';
+
+                // Filter by name prefix (case-insensitive); empty filter shows all
+                if (filter && !name.trim().toUpperCase().startsWith(filter)) {
+                    return;
+                }
+
+                const item = document.createElement('div');
+                item.className = 'conversation-item';
+                item.dataset.convIndex = index;
+                item.onclick = () => selectConversation(index);
+
+                const created = new Date(conv.created_at).toLocaleDateString('en-GB');
+                const messageCount = conv.chat_messages?.length || 0;
+
+                item.innerHTML = `
+                    <div class="conversation-name">${escapeHtml(name)}</div>
+                    <div class="conversation-meta">${created} • ${messageCount} messages</div>
+                `;
+
+                list.appendChild(item);
+            });
+
+            if (!list.children.length) {
+                list.innerHTML = '<p style="padding: 1rem; color: #718096;">No conversations match this filter. Clear the box to show all.</p>';
+            }
+        }
+
+        function selectConversation(index) {
+            selectedConversationIndex = index;
+            document.querySelectorAll('.conversation-item').forEach((item) => {
+                item.classList.toggle('selected', Number(item.dataset.convIndex) === index);
+            });
+        }
+
+        function closeConversationModal() {
+            document.getElementById('conversationModal').classList.remove('active');
+            uploadSection.style.display = 'block';
+            bulkConversationsData = null;
+            selectedConversationIndex = null;
+        }
+
+        function loadSelectedConversation() {
+            if (selectedConversationIndex === null) {
+                alert('Please select a conversation');
+                return;
+            }
+            
+            const selectedConv = bulkConversationsData[selectedConversationIndex];
+            document.getElementById('conversationModal').classList.remove('active');
+            loading.classList.add('active');
+            
+            try {
+                conversationData = convertBulkConversation(selectedConv);
+                displayResults();
+                loading.classList.remove('active');
+                statsSection.style.display = 'block';
+            } catch (error) {
+                alert('Error processing conversation: ' + error.message);
+                loading.classList.remove('active');
+                uploadSection.style.display = 'block';
+            }
+        }
+
+        // Retried or edited messages create branches in the export. Every
+        // message has a uuid and a parent_message_uuid; alternative retries
+        // share a parent, and the version that was KEPT is the one that
+        // later messages descend from. So: find the newest "leaf" (a message
+        // nothing else points to as parent) and walk back up the parent
+        // chain to the root. That path is the chat as shown on screen.
+        function resolveActiveThread(messages) {
+            if (!messages?.length || !messages[0].uuid) return messages || [];
+
+            const byUuid = {};
+            const isParent = new Set();
+            messages.forEach(m => {
+                byUuid[m.uuid] = m;
+                if (m.parent_message_uuid) isParent.add(m.parent_message_uuid);
+            });
+
+            const leaves = messages.filter(m => !isParent.has(m.uuid));
+            if (!leaves.length) return messages;
+
+            // The active branch ends at the most recently created leaf
+            let current = leaves.reduce((a, b) =>
+                (a.created_at || '') >= (b.created_at || '') ? a : b);
+
+            const chain = [];
+            while (current) {
+                chain.push(current);
+                current = byUuid[current.parent_message_uuid];
+            }
+            return chain.reverse();
+        }
+
+        // Remove placeholder blocks the export inserts where thinking or
+        // tool-use blocks sat in the original chat
+        function stripPlaceholders(text) {
+            return (text || '').replace(
+                /```\s*\r?\nThis block is not supported on your current device yet\.\s*\r?\n```\s*\r?\n?/g,
+                '').trim();
+        }
+
+        function convertBulkConversation(conv) {
+            // Convert Claude bulk format to standard format
+            const turns = [];
+            let currentTurn = null;
+            
+            resolveActiveThread(conv.chat_messages).forEach((msg, index) => {
+                const text = stripPlaceholders(msg.text || msg.content?.[0]?.text || '');
+                
+                if (msg.sender === 'human') {
+                    // Start new turn
+                    currentTurn = {
+                        conversation_id: conv.uuid,
+                        creation_timestamp: new Date(msg.created_at).getTime() / 1000,
+                        user_id: '',
+                        user_prompt: text,
+                        model_responses: [],
+                        model_thoughts: [],
+                        update_timestamp: new Date(msg.updated_at).getTime() / 1000,
+                        attachments: msg.attachments || []
+                    };
+                } else if (msg.sender === 'assistant' && currentTurn) {
+                    // Add response to current turn
+                    currentTurn.model_responses.push(text);
+                    turns.push(currentTurn);
+                    currentTurn = null;
+                }
+            });
+            
+            // Handle last turn if incomplete
+            if (currentTurn) {
+                turns.push(currentTurn);
+            }
+            
+            return {
+                conversation: {
+                    title: conv.name || 'Untitled',
+                    creation_timestamp: new Date(conv.created_at).getTime() / 1000,
+                    update_timestamp: new Date(conv.updated_at).getTime() / 1000,
+                    token_count: 'N/A'
+                },
+                turns: turns
+            };
+        }
+
+        function fixEncoding(text) {
+            if (!text) return text;
+            
+            // Fix common UTF-8 encoding issues
+            return text
+                .replace(/â€"/g, '—')      // em dash
+                .replace(/â€™/g, "'")      // right single quotation mark
+                .replace(/â€œ/g, '"')      // left double quotation mark
+                .replace(/â€/g, '"')       // right double quotation mark
+                .replace(/â€¦/g, '...')    // ellipsis
+                .replace(/â€˜/g, "'")      // left single quotation mark
+                .replace(/Â /g, ' ')       // non-breaking space
+                .replace(/â€"/g, '–')      // en dash
+                .replace(/Ã©/g, 'é')       // e with acute
+                .replace(/Ã¨/g, 'è')       // e with grave
+                .replace(/Ã /g, 'à')       // a with grave
+                .replace(/Ã§/g, 'ç')       // c with cedilla
+                .replace(/â€¢/g, '•')      // bullet point
+                .replace(/â„¢/g, '™')      // trademark
+                .replace(/Â©/g, '©')       // copyright
+                .replace(/Â®/g, '®');      // registered trademark
+        }
+
+        function displayResults() {
+            const turns = conversationData.turns || [];
+            const conversation = conversationData.conversation || {};
+
+            // Update stats
+            document.getElementById('totalTurns').textContent = turns.length;
+            
+            document.getElementById('conversationTitle').textContent = conversation.title || 'Untitled';
+            
+            // Populate custom chat name field with conversation title as default
+            const customNameField = document.getElementById('customChatName');
+            if (customNameField) {
+                // Don't overwrite if user has already typed something
+                if (!customNameField.value || customNameField.value === customNameField.placeholder) {
+                    customNameField.placeholder = conversation.title || 'conversation';
+                    customNameField.value = ''; // Clear to show placeholder
+                }
+            }
+
+            renderResults();
+        }
+
+        function renderResults() {
+            const showPrompts = document.getElementById('showPrompts').checked;
+            const showResponses = document.getElementById('showResponses').checked;
+            const turns = conversationData.turns || [];
+            
+            // Get custom character names
+            const userChar = document.getElementById('userCharacterName').value || 'User';
+            const assistantChar = document.getElementById('assistantCharacterName').value || 'Assistant';
+
+            let html = '';
+
+            turns.forEach((turn, index) => {
+                html += `<div class="turn-item" id="turn-${index + 1}">
+                    <div class="turn-header">
+                        <span class="turn-number" onclick="scrollToTop()" title="Click to return to top">Turn ${index + 1}</span>
+                    </div>`;
+
+                if (showPrompts && turn.user_prompt) {
+                    html += `
+                        <div class="section-title">❤️ ${escapeHtml(userChar)}</div>
+                        <div class="user-prompt">${escapeHtml(turn.user_prompt)}</div>
+                    `;
+                }
+
+                if (showResponses && turn.model_responses && turn.model_responses.length > 0) {
+                    // Only show the last response variant
+                    const lastResponse = turn.model_responses[turn.model_responses.length - 1];
+                    
+                    html += `
+                        <div class="section-title">💜 ${escapeHtml(assistantChar)}</div>
+                        <div class="model-response">${escapeHtml(lastResponse)}</div>
+                    `;
+                }
+
+                html += `</div>`;
+            });
+
+            results.innerHTML = html;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function jumpToTurn() {
+            const turnNumber = parseInt(document.getElementById('jumpToTurn').value);
+            const totalTurns = conversationData?.turns?.length || 0;
+            
+            if (!turnNumber || turnNumber < 1) {
+                alert('Please enter a valid turn number');
+                return;
+            }
+            
+            if (turnNumber > totalTurns) {
+                alert(`Turn ${turnNumber} doesn't exist. This conversation has ${totalTurns} turns.`);
+                return;
+            }
+            
+            const targetElement = document.getElementById(`turn-${turnNumber}`);
+            if (targetElement) {
+                targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Add a brief highlight effect
+                targetElement.style.backgroundColor = '#e6fffa';
+                setTimeout(() => {
+                    targetElement.style.backgroundColor = '';
+                }, 2000);
+            }
+        }
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Allow Enter key to trigger jump
+        document.addEventListener('DOMContentLoaded', function() {
+            const jumpInput = document.getElementById('jumpToTurn');
+            if (jumpInput) {
+                jumpInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        jumpToTurn();
+                    }
+                });
+            }
+        });
+
+        // ===== Reading Room integration =====
+
+        // Builds YAML frontmatter matching what prepare.html auto-fills:
+        // title, character, scenario, tags, status, date, summary
+        function buildFrontmatter() {
+            if (!document.getElementById('includeFrontmatter').checked) return '';
+
+            const conversation = conversationData.conversation || {};
+            const customName = document.getElementById('customChatName').value.trim();
+            const title = customName || conversation.title || '';
+            const character = document.getElementById('assistantCharacterName').value.trim();
+            const scenario = document.getElementById('fmScenario').value.trim();
+            const tags = document.getElementById('fmTags').value.trim();
+            const status = document.getElementById('fmStatus').value.trim() || 'complete';
+            const summary = document.getElementById('fmSummary').value.trim();
+
+            let date = new Date().toISOString().slice(0, 10);
+            if (conversation.creation_timestamp) {
+                date = new Date(conversation.creation_timestamp * 1000).toISOString().slice(0, 10);
+            }
+
+            return `---\n` +
+                `title: ${title}\n` +
+                `character: ${character}\n` +
+                `scenario: ${scenario}\n` +
+                `tags: ${tags}\n` +
+                `status: ${status}\n` +
+                `date: ${date}\n` +
+                `summary: ${summary}\n` +
+                `---\n\n`;
+        }
+
+        // Returns turns from the "Export from turn" number onwards
+        function getExportTurns() {
+            const turns = conversationData.turns || [];
+            const start = parseInt(document.getElementById('startFromTurn').value) || 1;
+            return turns.slice(Math.max(0, start - 1));
+        }
+
+        // Builds the story body shared by text, markdown and clipboard exports
+        function buildStoryBody(separator) {
+            const turns = getExportTurns();
+            const userChar = (document.getElementById('userCharacterName').value || 'User').toUpperCase();
+            const assistantChar = (document.getElementById('assistantCharacterName').value || 'Assistant').toUpperCase();
+            let text = '';
+
+            turns.forEach((turn, index) => {
+                if (turn.user_prompt) {
+                    text += `${userChar}:\n${turn.user_prompt}\n\n`;
+                }
+                if (turn.model_responses && turn.model_responses.length > 0) {
+                    const lastResponse = turn.model_responses[turn.model_responses.length - 1];
+                    text += `${assistantChar}:\n${lastResponse}\n\n`;
+                }
+                if (index < turns.length - 1) {
+                    text += `${separator}\n\n`;
+                }
+            });
+
+            return text;
+        }
+
+        function exportFileBasics() {
+            const conversation = conversationData.conversation || {};
+            const customName = document.getElementById('customChatName').value.trim();
+            const title = customName || conversation.title || 'conversation';
+
+            let dateStr = 'unknown-date';
+            if (conversation.creation_timestamp) {
+                const date = new Date(conversation.creation_timestamp * 1000);
+                dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            }
+            return { title, dateStr };
+        }
+
+        function exportAsMarkdown() {
+            const { title, dateStr } = exportFileBasics();
+            const content = buildFrontmatter() + buildStoryBody('* * *');
+            downloadFile(content, `${dateStr} - ${title}.md`, 'text/markdown');
+        }
+
+        function exportAsText(split = false) {
+            const turns = getExportTurns();
+            const { title, dateStr } = exportFileBasics();
+            const frontmatter = buildFrontmatter();
+            const userChar = (document.getElementById('userCharacterName').value || 'User').toUpperCase();
+            const assistantChar = (document.getElementById('assistantCharacterName').value || 'Assistant').toUpperCase();
+
+            if (!split) {
+                // Single file export. When frontmatter is on, the file is
+                // frontmatter + story only, ready for prepare.html; the old
+                // header is only added when frontmatter is off.
+                let text = frontmatter;
+                if (!frontmatter) {
+                    text += `Conversation: ${title}
+`;
+                    text += `Total Turns: ${turns.length}
+`;
+                    text += `${'='.repeat(80)}
+
+`;
+                }
+                text += buildStoryBody('* * *');
+                downloadFile(text, `${dateStr} - ${title}.txt`, 'text/plain');
+            } else {
+                // Split export - 50 turns per file
+                const turnsPerFile = 50;
+                const totalParts = Math.ceil(turns.length / turnsPerFile);
+
+                for (let part = 0; part < totalParts; part++) {
+                    const startIdx = part * turnsPerFile;
+                    const endIdx = Math.min(startIdx + turnsPerFile, turns.length);
+                    const partTurns = turns.slice(startIdx, endIdx);
+
+                    let text = part === 0 ? frontmatter : '';
+                    text += `Conversation: ${title} (Part ${part + 1} of ${totalParts})
+`;
+                    text += `Turns: ${startIdx + 1}-${endIdx} of ${turns.length}
+`;
+                    text += `${'='.repeat(80)}
+
+`;
+
+                    partTurns.forEach((turn, index) => {
+                        if (turn.user_prompt) {
+                            text += `${userChar}:
+${turn.user_prompt}
+
+`;
+                        }
+                        if (turn.model_responses && turn.model_responses.length > 0) {
+                            const lastResponse = turn.model_responses[turn.model_responses.length - 1];
+                            text += `${assistantChar}:
+${lastResponse}
+
+`;
+                        }
+                        if (index < partTurns.length - 1) {
+                            text += `* * *
+
+`;
+                        }
+                    });
+
+                    downloadFile(text, `${dateStr} - ${title} - Part ${part + 1}.txt`, 'text/plain');
+                }
+            }
+        }
+
+        function exportAsJSON() {
+            const turns = getExportTurns();
+            const fm = document.getElementById('includeFrontmatter').checked ? {
+                character: document.getElementById('assistantCharacterName').value.trim(),
+                scenario: document.getElementById('fmScenario').value.trim(),
+                tags: document.getElementById('fmTags').value.split(',').map(s => s.trim()).filter(Boolean),
+                status: document.getElementById('fmStatus').value.trim() || 'complete',
+                summary: document.getElementById('fmSummary').value.trim()
+            } : null;
+
+            const extracted = {
+                metadata: Object.assign({}, conversationData.conversation, fm ? { reading_room: fm } : {}),
+                turns: turns.map((turn, index) => ({
+                    turn_number: index + 1,
+                    timestamp: turn.creation_timestamp,
+                    user_prompt: turn.user_prompt,
+                    model_response: turn.model_responses && turn.model_responses.length > 0
+                        ? turn.model_responses[turn.model_responses.length - 1]
+                        : null
+                }))
+            };
+
+            const json = JSON.stringify(extracted, null, 2);
+            downloadFile(json, `${conversationData.conversation.title || 'conversation'}_extracted.json`, 'application/json');
+        }
+
+        function copyToClipboard() {
+            const text = buildFrontmatter() + buildStoryBody('* * *');
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Copied to clipboard!');
+            }).catch(err => {
+                alert('Failed to copy: ' + err);
+            });
+        }
+
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>

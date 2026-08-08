@@ -62,6 +62,15 @@
     letter-spacing:.08em;color:var(--ink-faint);min-height:1.2em}
 
   /* ---------- shell ---------- */
+  .refuge-nav{display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap;position:sticky;top:0;z-index:200;
+    padding:.8rem 1.4rem;border-bottom:1px solid var(--rule);background:var(--paper-raised)}
+  .rn-wordmark{font-family:var(--font-display);font-weight:500;font-size:1.25rem;color:var(--ink);text-decoration:none}
+  .rn-wordmark em{font-style:italic;color:var(--oxblood);font-weight:400}
+  .rn-spacer{flex:1}
+  .rn-link{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--ink-soft);text-decoration:none;padding:.3rem 0}
+  .rn-link:hover{color:var(--oxblood)}
+  .rn-link.active{color:var(--oxblood);border-bottom:2px solid var(--oxblood)}
   .masthead{padding:1.3rem clamp(1rem,4vw,2.5rem) 1.1rem;border-bottom:1px solid var(--rule);
     display:flex;align-items:baseline;gap:.9rem;flex-wrap:wrap;position:sticky;top:0;z-index:20;
     background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(10px)}
@@ -155,6 +164,15 @@
 </style>
 </head>
 <body>
+
+<nav class="refuge-nav">
+  <a class="rn-wordmark" href="landing.html">The <em>Refuge</em></a>
+  <span class="rn-spacer"></span>
+  <a class="rn-link" href="landing.html">Home</a>
+  <a class="rn-link" href="pipeline.html">Pipeline</a>
+  <a class="rn-link" href="pipeline.html#edit">Edit sealed</a>
+  <a class="rn-link active" href="index.html">Library</a>
+</nav>
 
 <!-- passphrase gate -->
 <div class="gate" id="gate">
