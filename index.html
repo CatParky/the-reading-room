@@ -399,21 +399,32 @@ function esc(s){ return String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;"
 
 /* ================= markdown rendering ================= */
 function md(txt){
-  const blocks = txt.split(/\n{2,}/);
-  return blocks.map(b=>{
-    b = b.trim(); if(!b) return "";
-    if(/^(---|\*\*\*|§)$/.test(b)) return "<hr>";
-    if(/^###\s/.test(b)) return `<h3>${inline(b.slice(4))}</h3>`;
-    if(/^##\s/.test(b))  return `<h2>${inline(b.slice(3))}</h2>`;
-    if(/^>\s?/.test(b))  return `<blockquote><p>${inline(b.replace(/^>\s?/gm,""))}</p></blockquote>`;
-    return `<p>${inline(b).replace(/\n/g,"<br>")}</p>`;
-  }).join("");
+  const lines = txt.replace(/\r\n/g,"\n").split("\n");
+  let html = "", para = [];
+  const flush = ()=>{
+    if(para.length){ html += `<p>${inline(para.join("\n")).replace(/\n/g,"<br>")}</p>`; para = []; }
+  };
+  for(let raw of lines){
+    const line = raw.replace(/\s+$/,"");
+    const t = line.trim();
+    if(t === ""){ flush(); continue; }
+    if(/^(---|\*\*\*|___|§)$/.test(t)){ flush(); html += "<hr>"; continue; }
+    let m;
+    if((m = t.match(/^#{4,6}\s+(.*)$/))){ flush(); html += `<h3>${inline(m[1])}</h3>`; continue; }
+    if((m = t.match(/^###\s+(.*)$/))){ flush(); html += `<h3>${inline(m[1])}</h3>`; continue; }
+    if((m = t.match(/^##\s+(.*)$/))){ flush(); html += `<h2>${inline(m[1])}</h2>`; continue; }
+    if((m = t.match(/^#\s+(.*)$/))){ flush(); html += `<h2>${inline(m[1])}</h2>`; continue; }
+    if((m = t.match(/^>\s?(.*)$/))){ flush(); html += `<blockquote><p>${inline(m[1])}</p></blockquote>`; continue; }
+    para.push(line);
+  }
+  flush();
+  return html;
 }
 function inline(s){
   s = esc(s);
   s = s.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");
   s = s.replace(/\*(.+?)\*/g,"<em>$1</em>");
-  s = s.replace(/_(.+?)_/g,"<em>$1</em>");
+  s = s.replace(/(^|[^a-zA-Z0-9])_(.+?)_(?=[^a-zA-Z0-9]|$)/g,"$1<em>$2</em>");
   return s;
 }
 
