@@ -154,7 +154,9 @@
   .prose p{margin:0 0 1.15em;text-wrap:pretty}
   .prose em{font-style:italic}
   .prose strong{font-weight:600}
-  .prose h2,.prose h3{font-family:var(--font-display);font-weight:500;margin:1.6em 0 .6em;line-height:1.2}
+  /* headings read at body size — quiet section markers, not billboards */
+  .prose h2,.prose h3{font-family:var(--font-body);font-size:var(--prose-size);
+    font-weight:600;line-height:1.78;margin:1.6em 0 0;letter-spacing:0}
   .prose blockquote{border-left:2px solid var(--rule);padding-left:1em;color:var(--ink-soft);
     font-style:italic;margin:0 0 1.15em}
   .prose hr{border:none;text-align:center;margin:2.2em 0}
