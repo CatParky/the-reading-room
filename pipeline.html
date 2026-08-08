@@ -418,33 +418,72 @@ const $ = s => document.querySelector(s);
     document.documentElement.dataset.theme=n; localStorage.setItem("rr_theme",n);};
 })();
 
-/* ===== shared tag picker (growing lowercase library, autocomplete, manager) ===== */
-const TAGLIB_KEY = "rr_tag_library";
-function loadTagLib(){ try{ return JSON.parse(localStorage.getItem(TAGLIB_KEY))||[]; }catch(e){ return []; } }
-function saveTagLib(list){ localStorage.setItem(TAGLIB_KEY, JSON.stringify([...new Set(list)].sort())); }
-(function normalise(){ const l=loadTagLib(); const lo=[...new Set(l.map(t=>t.trim().toLowerCase()).filter(Boolean))].sort();
-  if(JSON.stringify(lo)!==JSON.stringify(l)) saveTagLib(lo); })();
+/* ===== shared tag picker (repo-backed central list, localStorage cache, autocomplete) ===== */
+const TAGLIB_KEY   = "rr_tag_library";
+const TAGTOKEN_KEY = "rr_gh_token";
+const TAGS_URL = "https://catparky.github.io/the-reading-room/tags.txt";
+const TAGS_API = "https://api.github.com/repos/CatParky/the-reading-room/contents/tags.txt";
 
-// A tag picker instance bound to a set of element ids and its own chosen-tags array.
+function loadTagLib(){ try{ return JSON.parse(localStorage.getItem(TAGLIB_KEY))||[]; }catch(e){ return []; } }
+function saveTagLib(list){ localStorage.setItem(TAGLIB_KEY, JSON.stringify([...new Set(list.map(t=>t.trim().toLowerCase()).filter(Boolean))].sort())); }
+
+async function syncTagsFromRepo(quiet){
+  try{
+    const r=await fetch(TAGS_URL+"?t="+Date.now());
+    if(!r.ok) throw new Error("fetch failed");
+    const txt=await r.text();
+    const remote=txt.split("\n").map(t=>t.trim().toLowerCase()).filter(Boolean);
+    const merged=[...new Set([...loadTagLib(),...remote])].sort();
+    saveTagLib(merged);
+    if(!quiet) tagSyncMsg("Tags refreshed — "+merged.length+" in list.","ok");
+    return merged;
+  }catch(e){
+    if(!quiet) tagSyncMsg("Couldn't reach tags.txt — are you online?","err");
+    return loadTagLib();
+  }
+}
+
+async function pushTagsToRepo(list){
+  const token=localStorage.getItem(TAGTOKEN_KEY);
+  if(!token){ tagSyncMsg("Paste your GitHub token below first.","err"); return false; }
+  try{
+    const meta=await fetch(TAGS_API,{headers:{"Authorization":"token "+token,"Accept":"application/vnd.github.v3+json"}});
+    const mj=await meta.json(); if(!meta.ok) throw new Error(mj.message||"API error");
+    const content=btoa(list.join("\n")+"\n");
+    const put=await fetch(TAGS_API,{method:"PUT",
+      headers:{"Authorization":"token "+token,"Accept":"application/vnd.github.v3+json","Content-Type":"application/json"},
+      body:JSON.stringify({message:"Update tag list",content,sha:mj.sha})});
+    const pj=await put.json(); if(!put.ok) throw new Error(pj.message||"write failed");
+    tagSyncMsg("tags.txt saved to repo ✓","ok"); return true;
+  }catch(e){ tagSyncMsg("Couldn't write to repo: "+e.message,"err"); return false; }
+}
+
+function tagSyncMsg(msg,type){
+  const el=document.getElementById("tagSyncMsg"); if(!el) return;
+  el.textContent=msg; el.style.color=type==="ok"?"var(--sage)":"var(--ox)";
+  setTimeout(()=>{ if(el.textContent===msg) el.textContent=""; },5000);
+}
+
+(function(){ saveTagLib(loadTagLib()); })(); /* normalise on load */
+syncTagsFromRepo(true);                       /* quiet background fetch */
+
 function makeTagPicker(chipsId, inputId, dropId){
-  const chosen = [];
-  let dropIdx = -1;
-  const chipsEl = ()=>document.getElementById(chipsId);
-  const inputEl = ()=>document.getElementById(inputId);
-  const dropEl  = ()=>document.getElementById(dropId);
+  const chosen=[];
+  let dropIdx=-1;
+  const chipsEl=()=>document.getElementById(chipsId);
+  const inputEl=()=>document.getElementById(inputId);
+  const dropEl =()=>document.getElementById(dropId);
   function renderChips(){
     const box=chipsEl(); if(!box) return; box.innerHTML="";
     chosen.forEach(t=>{
       const b=document.createElement("button"); b.type="button";
       b.style.cssText="background:var(--ox);color:var(--paper);border:none;border-radius:2rem;padding:.28rem .7rem .28rem .8rem;font-family:var(--fm);font-size:.72rem;cursor:pointer";
-      b.innerHTML=t+" &times;"; b.title="Remove"; b.onclick=()=>{ remove(t); };
-      box.appendChild(b);
+      b.innerHTML=t+" &times;"; b.title="Remove"; b.onclick=()=>remove(t);
+      chipsEl().appendChild(b);
     });
   }
-  function add(raw){ const t=String(raw).trim().toLowerCase();
-    if(!t||chosen.includes(t)) return;
-    chosen.push(t); const lib=loadTagLib(); if(!lib.includes(t)){ lib.push(t); saveTagLib(lib); }
-    renderChips(); }
+  function add(raw){ const t=String(raw).trim().toLowerCase(); if(!t||chosen.includes(t)) return;
+    chosen.push(t); const lib=loadTagLib(); if(!lib.includes(t)){ lib.push(t); saveTagLib(lib); } renderChips(); }
   function remove(t){ const i=chosen.indexOf(t); if(i>=0) chosen.splice(i,1); renderChips(); }
   function setAll(list){ chosen.length=0; (list||[]).forEach(t=>{ const v=String(t).trim().toLowerCase(); if(v&&!chosen.includes(v)) chosen.push(v); }); renderChips(); }
   function showDrop(){
@@ -453,8 +492,8 @@ function makeTagPicker(chipsId, inputId, dropId){
     const matches=q?lib.filter(t=>t.includes(q)):lib;
     const drop=dropEl(); dropIdx=-1; let html="";
     matches.forEach((t,i)=>{ html+=`<div class="tagopt" data-tag="${t}" data-i="${i}" style="padding:.5rem .8rem;cursor:pointer;font-family:var(--fb);font-size:.9rem;color:var(--ink)">${t}</div>`; });
-    if(q && !lib.includes(q) && !chosen.includes(q))
-      html+=`<div class="tagopt" data-tag="${q}" data-i="${matches.length}" style="padding:.5rem .8rem;cursor:pointer;font-family:var(--fb);font-size:.9rem;color:var(--ox);border-top:1px solid var(--rule)">+ create new tag “${q}”</div>`;
+    if(q&&!lib.includes(q)&&!chosen.includes(q))
+      html+=`<div class="tagopt" data-tag="${q}" data-i="${matches.length}" style="padding:.5rem .8rem;cursor:pointer;font-family:var(--fb);font-size:.9rem;color:var(--ox);border-top:1px solid var(--rule)">+ add new tag "${q}"</div>`;
     if(!html){ drop.style.display="none"; return; }
     drop.innerHTML=html; drop.style.display="block";
     drop.querySelectorAll(".tagopt").forEach(opt=>{
@@ -466,9 +505,9 @@ function makeTagPicker(chipsId, inputId, dropId){
     opts.forEach((o,j)=>o.style.background=j===i?"var(--paper)":"transparent"); }
   const inp=inputEl();
   if(inp){
-    inp.addEventListener("focus", showDrop);
-    inp.addEventListener("input", showDrop);
-    inp.addEventListener("keydown", e=>{
+    inp.addEventListener("focus",showDrop);
+    inp.addEventListener("input",showDrop);
+    inp.addEventListener("keydown",e=>{
       const opts=dropEl().querySelectorAll(".tagopt");
       if(e.key==="ArrowDown"){ e.preventDefault(); hi(Math.min(dropIdx+1,opts.length-1)); }
       else if(e.key==="ArrowUp"){ e.preventDefault(); hi(Math.max(dropIdx-1,0)); }
@@ -478,34 +517,78 @@ function makeTagPicker(chipsId, inputId, dropId){
         inp.value=""; showDrop(); }
       else if(e.key==="Escape"){ dropEl().style.display="none"; }
     });
-    inp.addEventListener("blur", ()=>{ setTimeout(()=>{ if(dropEl()) dropEl().style.display="none"; }, 150); });
+    inp.addEventListener("blur",()=>{ setTimeout(()=>{ if(dropEl()) dropEl().style.display="none"; },150); });
   }
   renderChips();
   return { get:()=>chosen.slice(), add, setAll, flushPending:()=>{ const v=inputEl().value.trim(); if(v){ v.split(",").forEach(add); inputEl().value=""; } } };
 }
+
 function wireTagManager(detailsId, listId){
   const d=document.getElementById(detailsId); if(!d) return;
   function render(){
     const box=document.getElementById(listId); if(!box) return;
     const lib=loadTagLib();
-    if(!lib.length){ box.innerHTML=`<p style="font-size:.85rem;color:var(--faint);font-style:italic">No tags yet.</p>`; return; }
-    box.innerHTML="";
+    box.innerHTML=`
+      <p style="font-size:.82rem;color:var(--soft);font-style:italic;margin-bottom:.8rem;line-height:1.6">
+        Tags are stored in <code>tags.txt</code> in the repo and load automatically each visit.
+        Add a new tag here and it saves back to the file. A one-time GitHub token is needed for saving —
+        or edit <code>tags.txt</code> directly in the GitHub web editor.</p>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:.7rem">
+        <input id="tagSyncNewTag" placeholder="new tag to add…" autocomplete="off"
+          style="flex:1;min-width:9rem;font-size:.9rem;padding:.4rem .6rem">
+        <button type="button" id="tagSyncAdd"
+          style="background:var(--ox);color:var(--paper);border:none;border-radius:.35rem;padding:.4rem .8rem;font-family:var(--fm);font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;white-space:nowrap">
+          Add &amp; save to repo</button>
+        <button type="button" id="tagSyncRefresh"
+          style="background:none;border:1px solid var(--rule);border-radius:.35rem;padding:.4rem .8rem;font-family:var(--fm);font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;color:var(--soft);cursor:pointer;white-space:nowrap">
+          ↻ Refresh from repo</button>
+      </div>
+      <details style="margin-bottom:.8rem">
+        <summary style="font-family:var(--fm);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);cursor:pointer;padding:.3rem 0">GitHub token (one-time setup for saving)</summary>
+        <div style="margin-top:.5rem">
+        <p style="font-size:.8rem;color:var(--soft);margin-bottom:.5rem;line-height:1.6">
+          <strong>github.com → Settings → Developer settings → Personal access tokens → Fine-grained</strong><br>
+          Repository access: <em>the-reading-room only</em> · Permission: <em>Contents: Read and write</em>.<br>
+          Paste below — stored only in this browser, never sent anywhere except GitHub directly.</p>
+        <div style="display:flex;gap:.5rem">
+          <input type="password" id="tagTokenInput" placeholder="github_pat_…"
+            style="flex:1;font-size:.85rem;padding:.4rem .6rem;font-family:monospace">
+          <button type="button" id="tagTokenSave"
+            style="background:none;border:1px solid var(--rule);border-radius:.35rem;padding:.4rem .7rem;font-family:var(--fm);font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;color:var(--soft);cursor:pointer">Save</button>
+        </div></div>
+      </details>
+      <p id="tagSyncMsg" style="font-size:.82rem;min-height:1.2em;margin-bottom:.6rem"></p>
+      <div style="font-family:var(--fm);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:.5rem">Current list (${lib.length} tags)</div>
+      <div id="${listId}Chips" style="display:flex;flex-wrap:wrap;gap:.35rem"></div>`;
+
+    const chips=document.getElementById(listId+"Chips");
     lib.forEach(t=>{
-      const row=document.createElement("div"); row.style.cssText="display:flex;gap:.5rem;align-items:center;margin-bottom:.4rem";
-      const inp=document.createElement("input"); inp.value=t; inp.style.cssText="flex:1;font-size:.9rem;padding:.4rem .6rem";
-      const ren=document.createElement("button"); ren.type="button"; ren.textContent="Rename";
-      ren.style.cssText="background:none;border:1px solid var(--rule);border-radius:.35rem;padding:.4rem .7rem;font-family:var(--fm);font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;color:var(--soft);cursor:pointer;white-space:nowrap";
-      ren.onmousedown=e=>e.preventDefault();
-      ren.onclick=()=>{ const nv=inp.value.trim().toLowerCase(); if(!nv||nv===t) return;
-        const l=loadTagLib().filter(x=>x!==t); if(!l.includes(nv)) l.push(nv); saveTagLib(l); render(); };
-      const del=document.createElement("button"); del.type="button"; del.innerHTML="&times;"; del.title="Delete";
-      del.style.cssText="background:none;border:1px solid var(--rule);border-radius:.35rem;padding:.4rem .65rem;font-size:.9rem;color:var(--ox);cursor:pointer;line-height:1";
-      del.onmousedown=e=>e.preventDefault();
-      del.onclick=()=>{ saveTagLib(loadTagLib().filter(x=>x!==t)); render(); };
-      row.appendChild(inp); row.appendChild(ren); row.appendChild(del); box.appendChild(row);
+      const sp=document.createElement("span");
+      sp.style.cssText="background:var(--paper);border:1px solid var(--rule);border-radius:2rem;padding:.2rem .65rem;font-family:var(--fb);font-size:.82rem;color:var(--soft)";
+      sp.textContent=t; chips.appendChild(sp);
     });
+
+    if(localStorage.getItem(TAGTOKEN_KEY))
+      document.getElementById("tagTokenInput").placeholder="(token saved — paste new one to replace)";
+
+    document.getElementById("tagTokenSave").onclick=()=>{
+      const v=(document.getElementById("tagTokenInput").value||"").trim();
+      if(v){ localStorage.setItem(TAGTOKEN_KEY,v); tagSyncMsg("Token saved to this browser.","ok");
+        document.getElementById("tagTokenInput").value=""; }
+    };
+    document.getElementById("tagSyncRefresh").onclick=async()=>{
+      const btn=document.getElementById("tagSyncRefresh"); btn.textContent="…";
+      await syncTagsFromRepo(false); render(); };
+    document.getElementById("tagSyncAdd").onclick=async()=>{
+      const v=(document.getElementById("tagSyncNewTag").value||"").trim().toLowerCase();
+      if(!v){ tagSyncMsg("Type a tag first.","err"); return; }
+      const lib2=loadTagLib();
+      if(lib2.includes(v)){ tagSyncMsg(`"${v}" is already in the list.`,"err"); return; }
+      lib2.push(v); saveTagLib(lib2);
+      await pushTagsToRepo(lib2); render();
+    };
   }
-  d.addEventListener("toggle", ()=>{ if(d.open) render(); });
+  d.addEventListener("toggle",()=>{ if(d.open) render(); });
 }
 
 function freshState(title, created, turns){

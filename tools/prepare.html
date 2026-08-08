@@ -113,220 +113,159 @@
 </div>
 
 <script>
-/* ===== crypto — identical parameters to index.html ===== */
-const ITER = 310000;
-const b64 = a => {
-  const u = new Uint8Array(a); let s = "";
-  for(let i=0;i<u.length;i+=0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i+0x8000));
-  return btoa(s);
-};
-async function deriveKey(pass, salt){
-  const raw = await crypto.subtle.importKey("raw", new TextEncoder().encode(pass),
-    "PBKDF2", false, ["deriveKey"]);
-  return crypto.subtle.deriveKey({name:"PBKDF2", salt, iterations:ITER, hash:"SHA-256"},
-    raw, {name:"AES-GCM", length:256}, false, ["encrypt"]);
-}
-
-/* ===== frontmatter auto-fill on paste ===== */
 const $ = s=>document.querySelector(s);
 
-/* ===== theme (shares rr_theme with the library) ===== */
-const THEMES = ["light","dark","night"];
-function setTheme(t){ document.documentElement.dataset.theme = t; localStorage.setItem("rr_theme", t); }
-$("#themeBtn").onclick = ()=>{
-  const cur = document.documentElement.dataset.theme || "light";
-  setTheme(THEMES[(THEMES.indexOf(cur)+1)%THEMES.length]);
-};
-setTheme(localStorage.getItem("rr_theme") ||
-  (matchMedia("(prefers-color-scheme:dark)").matches ? "dark" : "light"));
+/* ===== theme ===== */
+(function(){
+  var THEMES=["light","dark","night"];
+  var b=document.getElementById("themeBtn");
+  if(b) b.onclick=function(){var c=document.documentElement.dataset.theme||"light";
+    var n=THEMES[(THEMES.indexOf(c)+1)%THEMES.length];
+    document.documentElement.dataset.theme=n; localStorage.setItem("rr_theme",n);};
+})();
+
+/* ===== repo-backed tag library ===== */
+const TAGLIB_KEY   = "rr_tag_library";
+const TAGS_URL = "https://catparky.github.io/the-reading-room/tags.txt";
+function loadTagLib(){ try{ return JSON.parse(localStorage.getItem(TAGLIB_KEY))||[]; }catch(e){ return []; } }
+function saveTagLib(list){ localStorage.setItem(TAGLIB_KEY, JSON.stringify([...new Set(list.map(t=>t.trim().toLowerCase()).filter(Boolean))].sort())); }
+async function syncTagsFromRepo(){
+  try{
+    const r=await fetch(TAGS_URL+"?t="+Date.now()); if(!r.ok) return;
+    const remote=await r.text();
+    const merged=[...new Set([...loadTagLib(),...remote.split("\n").map(t=>t.trim().toLowerCase()).filter(Boolean)])].sort();
+    saveTagLib(merged);
+  }catch(e){}
+}
+saveTagLib(loadTagLib());
+syncTagsFromRepo();
+
+/* ===== frontmatter auto-fill on paste ===== */
 $("#body").addEventListener("input", ()=>{
-  const t = $("#body").value;
-  const m = t.match(/^---\s*\n([\s\S]*?)\n---\s*\n?/);
+  const t=$("#body").value;
+  const m=t.match(/^---\s*\n([\s\S]*?)\n---\s*\n?/);
   if(!m) return;
-  const fm = {};
+  const fm={};
   m[1].split("\n").forEach(line=>{
-    const i = line.indexOf(":"); if(i<0) return;
-    fm[line.slice(0,i).trim().toLowerCase()] = line.slice(i+1).trim();
+    const i=line.indexOf(":"); if(i<0) return;
+    fm[line.slice(0,i).trim().toLowerCase()]=line.slice(i+1).trim();
   });
-  const set = (id, v)=>{ if(v && !$(id).value) $(id).value = v; };
-  set("#title", fm.chapter || fm.title); set("#character", fm.character);
-  set("#scenario", fm.story || fm.scenario); set("#summary", fm.summary);
-  set("#status", fm.status); set("#date", fm.date); set("#part", fm.part);
-  if(fm.tags && curTags.length===0)
+  const set=(id,v)=>{ if(v&&!$(id).value) $(id).value=v; };
+  set("#title", fm.chapter||fm.title); set("#character",fm.character);
+  set("#scenario",fm.story||fm.scenario); set("#summary",fm.summary);
+  set("#status",fm.status); set("#date",fm.date); set("#part",fm.part);
+  if(fm.tags&&curTags.length===0)
     fm.tags.replace(/[\[\]]/g,"").split(",").map(s=>s.trim()).filter(Boolean).forEach(addTag);
 });
 
-/* ===== tag autocomplete with growing lowercase library ===== */
-const TAGLIB_KEY = "rr_tag_library";
-let curTags = [];
-let dropIndex = -1;
-function loadTagLibrary(){
-  try{ return JSON.parse(localStorage.getItem(TAGLIB_KEY)) || []; }catch(e){ return []; }
-}
-function saveTagLibrary(list){ localStorage.setItem(TAGLIB_KEY, JSON.stringify([...new Set(list)].sort())); }
-function addTag(raw){
-  const t = String(raw).trim().toLowerCase();
-  if(!t || curTags.includes(t)) return;
-  curTags.push(t);
-  const lib = loadTagLibrary();
-  if(!lib.includes(t)){ lib.push(t); saveTagLibrary(lib); }
-  renderChips();
-}
-function removeTag(t){ curTags = curTags.filter(x=>x!==t); renderChips(); }
+/* ===== tag picker ===== */
+let curTags=[], dropIndex=-1;
+function addTag(raw){ const t=String(raw).trim().toLowerCase(); if(!t||curTags.includes(t)) return;
+  curTags.push(t); const lib=loadTagLib(); if(!lib.includes(t)){ lib.push(t); saveTagLib(lib); } renderChips(); }
+function removeTag(t){ curTags=curTags.filter(x=>x!==t); renderChips(); }
 function renderChips(){
-  const chips = $("#tagChips"); chips.innerHTML = "";
+  const chips=$("#tagChips"); if(!chips) return; chips.innerHTML="";
   curTags.forEach(t=>{
-    const b = document.createElement("button");
-    b.type="button";
-    b.style.cssText="background:var(--ox);color:var(--raised);border:none;border-radius:2rem;padding:.28rem .7rem .28rem .8rem;font-family:ui-monospace,monospace;font-size:.72rem;cursor:pointer";
-    b.innerHTML = t + " &times;";
-    b.title = "Remove";
-    b.onclick = ()=>removeTag(t);
-    chips.appendChild(b);
+    const b=document.createElement("button"); b.type="button";
+    b.style.cssText="background:var(--ox);color:var(--paper);border:none;border-radius:2rem;padding:.28rem .7rem .28rem .8rem;font-family:ui-monospace,monospace;font-size:.72rem;cursor:pointer";
+    b.innerHTML=t+" &times;"; b.title="Remove"; b.onclick=()=>removeTag(t); chips.appendChild(b);
   });
 }
 function showDrop(){
-  const q = $("#tags").value.trim().toLowerCase();
-  const lib = loadTagLibrary().filter(t=>!curTags.includes(t));
-  const matches = q ? lib.filter(t=>t.includes(q)) : lib;
-  const drop = $("#tagDrop");
-  dropIndex = -1;
-  let html = "";
-  matches.forEach((t,i)=>{
-    html += `<div class="tagopt" data-tag="${t}" data-i="${i}" style="padding:.5rem .8rem;cursor:pointer;font-family:Georgia,serif;font-size:.9rem;color:var(--ink)">${t}</div>`;
-  });
-  // offer to create a new tag if what's typed isn't an exact existing match
-  if(q && !lib.includes(q) && !curTags.includes(q)){
-    html += `<div class="tagopt tagnew" data-tag="${q}" data-i="${matches.length}" style="padding:.5rem .8rem;cursor:pointer;font-family:Georgia,serif;font-size:.9rem;color:var(--ox);border-top:1px solid var(--rule)">+ create new tag “${q}”</div>`;
-  }
+  const q=($("#tags").value||"").trim().toLowerCase();
+  const lib=loadTagLib().filter(t=>!curTags.includes(t));
+  const matches=q?lib.filter(t=>t.includes(q)):lib;
+  const drop=$("#tagDrop"); dropIndex=-1; let html="";
+  matches.forEach((t,i)=>{ html+=`<div class="tagopt" data-tag="${t}" data-i="${i}" style="padding:.5rem .8rem;cursor:pointer;font-family:Georgia,serif;font-size:.9rem;color:var(--ink)">${t}</div>`; });
+  if(q&&!lib.includes(q)&&!curTags.includes(q))
+    html+=`<div class="tagopt" data-tag="${q}" data-i="${matches.length}" style="padding:.5rem .8rem;cursor:pointer;font-family:Georgia,serif;font-size:.9rem;color:var(--ox);border-top:1px solid var(--rule)">+ add new tag "${q}"</div>`;
   if(!html){ drop.style.display="none"; return; }
-  drop.innerHTML = html;
-  drop.style.display = "block";
+  drop.innerHTML=html; drop.style.display="block";
   drop.querySelectorAll(".tagopt").forEach(opt=>{
-    opt.onmousedown = e=>{ e.preventDefault(); addTag(opt.dataset.tag); $("#tags").value=""; showDrop(); $("#tags").focus(); };
-    opt.onmouseenter = ()=>{ highlight(+opt.dataset.i); };
+    opt.onmousedown=e=>{ e.preventDefault(); addTag(opt.dataset.tag); $("#tags").value=""; showDrop(); $("#tags").focus(); };
+    opt.onmouseenter=()=>highlight(+opt.dataset.i);
   });
 }
-function highlight(i){
-  const opts = $("#tagDrop").querySelectorAll(".tagopt");
-  dropIndex = i;
-  opts.forEach((o,j)=>{ o.style.background = j===i ? "var(--paper)" : "transparent"; });
-}
-$("#tags").addEventListener("focus", showDrop);
-$("#tags").addEventListener("input", showDrop);
-$("#tags").addEventListener("keydown", e=>{
-  const opts = $("#tagDrop").querySelectorAll(".tagopt");
-  if(e.key==="ArrowDown"){ e.preventDefault(); highlight(Math.min(dropIndex+1, opts.length-1)); }
-  else if(e.key==="ArrowUp"){ e.preventDefault(); highlight(Math.max(dropIndex-1, 0)); }
-  else if(e.key==="Enter"){
-    e.preventDefault();
-    if(dropIndex>=0 && opts[dropIndex]){ addTag(opts[dropIndex].dataset.tag); }
+function highlight(i){ const opts=$("#tagDrop").querySelectorAll(".tagopt"); dropIndex=i;
+  opts.forEach((o,j)=>o.style.background=j===i?"var(--paper)":"transparent"); }
+$("#tags").addEventListener("focus",showDrop);
+$("#tags").addEventListener("input",showDrop);
+$("#tags").addEventListener("keydown",e=>{
+  const opts=$("#tagDrop").querySelectorAll(".tagopt");
+  if(e.key==="ArrowDown"){ e.preventDefault(); highlight(Math.min(dropIndex+1,opts.length-1)); }
+  else if(e.key==="ArrowUp"){ e.preventDefault(); highlight(Math.max(dropIndex-1,0)); }
+  else if(e.key==="Enter"){ e.preventDefault();
+    if(dropIndex>=0&&opts[dropIndex]) addTag(opts[dropIndex].dataset.tag);
     else { const v=$("#tags").value.trim(); if(v) v.split(",").forEach(addTag); }
-    $("#tags").value=""; showDrop();
-  }
-  else if(e.key==="Escape"){ $("#tagDrop").style.display="none"; }
+    $("#tags").value=""; showDrop(); }
+  else if(e.key==="Escape") $("#tagDrop").style.display="none";
 });
-$("#tags").addEventListener("blur", ()=>{
-  setTimeout(()=>{ $("#tagDrop").style.display="none"; }, 150);
-});
+$("#tags").addEventListener("blur",()=>{ setTimeout(()=>{ $("#tagDrop").style.display="none"; },150); });
 renderChips();
 
-/* ===== tag library manager ===== */
-(function normaliseLibrary(){
-  const lib = loadTagLibrary();
-  const lowered = [...new Set(lib.map(t=>t.trim().toLowerCase()).filter(Boolean))].sort();
-  if(JSON.stringify(lowered)!==JSON.stringify(lib)) saveTagLibrary(lowered);
-})();
+/* ===== tag manager panel (read-only — add tags via pipeline) ===== */
 function renderManager(){
-  const box = $("#mgrList"); if(!box) return;
-  const lib = loadTagLibrary();
-  if(!lib.length){ box.innerHTML = `<p style="font-size:.85rem;color:var(--faint);font-style:italic">No tags yet — they'll appear here as you use them.</p>`; return; }
-  box.innerHTML = "";
-  lib.forEach(t=>{
-    const row = document.createElement("div");
-    row.style.cssText="display:flex;gap:.5rem;align-items:center;margin-bottom:.4rem";
-    const inp = document.createElement("input");
-    inp.value = t;
-    inp.style.cssText="flex:1;font-size:.9rem;padding:.4rem .6rem";
-    const rename = document.createElement("button");
-    rename.type="button"; rename.textContent="Rename";
-    rename.style.cssText="background:none;border:1px solid var(--rule);border-radius:.35rem;padding:.4rem .7rem;font-family:ui-monospace,monospace;font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;color:var(--soft);cursor:pointer;white-space:nowrap";
-    rename.onmousedown = e=>e.preventDefault();
-    rename.onclick = ()=>{
-      const nv = inp.value.trim().toLowerCase();
-      if(!nv || nv===t){ return; }
-      const lib2 = loadTagLibrary().filter(x=>x!==t);
-      if(!lib2.includes(nv)) lib2.push(nv);
-      saveTagLibrary(lib2);
-      renderManager();
-    };
-    const del = document.createElement("button");
-    del.type="button"; del.innerHTML="&times;";
-    del.title="Delete";
-    del.style.cssText="background:none;border:1px solid var(--rule);border-radius:.35rem;padding:.4rem .65rem;font-size:.9rem;color:var(--ox);cursor:pointer;line-height:1";
-    del.onmousedown = e=>e.preventDefault();
-    del.onclick = ()=>{ saveTagLibrary(loadTagLibrary().filter(x=>x!==t)); renderManager(); };
-    row.appendChild(inp); row.appendChild(rename); row.appendChild(del);
-    box.appendChild(row);
-  });
+  const box=$("#mgrList"); if(!box) return;
+  const lib=loadTagLib();
+  box.innerHTML=`<p style="font-size:.82rem;color:var(--soft);font-style:italic;margin-bottom:.8rem;line-height:1.6">
+    Tags are fetched from <code>tags.txt</code> in the repo. To add or rename tags, use the
+    Pipeline's Archive → Manage your tag list panel, or edit <code>tags.txt</code> directly
+    in GitHub's web editor.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:.35rem" id="mgrChipsInner"></div>`;
+  const ch=document.getElementById("mgrChipsInner");
+  lib.forEach(t=>{ const sp=document.createElement("span");
+    sp.style.cssText="background:var(--paper);border:1px solid var(--rule);border-radius:2rem;padding:.2rem .65rem;font-family:Georgia,serif;font-size:.82rem;color:var(--soft)";
+    sp.textContent=t; ch.appendChild(sp); });
+  if(!lib.length) ch.innerHTML=`<p style="font-size:.85rem;color:var(--faint);font-style:italic">No tags loaded yet.</p>`;
 }
-$("#tagMgr").addEventListener("toggle", ()=>{ if($("#tagMgr").open) renderManager(); });
+if($("#tagMgr")) $("#tagMgr").addEventListener("toggle",()=>{ if($("#tagMgr").open) renderManager(); });
 
-/* ===== seal ===== */
-$("#seal").onclick = async ()=>{
-  const msg = $("#msg"); msg.className="msg"; msg.textContent="";
+/* ===== crypto + seal ===== */
+const b64=a=>{ const u=new Uint8Array(a); let s="";
+  for(let i=0;i<u.length;i+=0x8000) s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));
+  return btoa(s); };
+const ITER=310000;
+async function deriveKey(pass,salt){
+  const raw=await crypto.subtle.importKey("raw",new TextEncoder().encode(pass),"PBKDF2",false,["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:ITER,hash:"SHA-256"},raw,{name:"AES-GCM",length:256},false,["encrypt"]);
+}
+$("#seal").onclick=async()=>{
+  const msg=$("#msg"); msg.className="msg"; msg.textContent="";
   try{
-  let body = $("#body").value.trim();
-  const pass = $("#pass").value;
-  if(!window.crypto || !crypto.subtle){
-    msg.className="msg err";
-    msg.textContent="This browser context can't encrypt. Open the tool at its https:// address (catparky.github.io/the-reading-room/tools/prepare.html)."; return; }
-  if(!body){ msg.className="msg err"; msg.textContent="Paste the story text first."; return; }
-  if(!$("#scenario").value.trim()){ msg.className="msg err"; msg.textContent="Fill in at least the Story Name."; return; }
-  if(pass.length < 8){ msg.className="msg err"; msg.textContent="Passphrase needs to be at least 8 characters."; return; }
-  // catch any tag still sitting unsubmitted in the input
-  const pending = $("#tags").value.trim();
-  if(pending){ pending.split(",").forEach(addTag); $("#tags").value=""; }
-  body = body.replace(/^---\s*\n[\s\S]*?\n---\s*\n?/,""); // strip frontmatter from body
-
-  const story = {
-    title: $("#title").value.trim(),
-    part: $("#part").value.trim(),
-    character: $("#character").value.trim(),
-    scenario: $("#scenario").value.trim(),
-    tags: curTags.slice(),
-    status: $("#status").value.trim() || "complete",
-    date: $("#date").value || new Date().toISOString().slice(0,10),
-    summary: $("#summary").value.trim(),
-    body
-  };
-
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const iv   = crypto.getRandomValues(new Uint8Array(12));
-  const key  = await deriveKey(pass, salt);
-  const ct   = await crypto.subtle.encrypt({name:"AES-GCM", iv}, key,
-    new TextEncoder().encode(JSON.stringify(story)));
-
-  const pkg = {v:1, salt:b64(salt), iv:b64(iv), ct:b64(ct)};
-
-  // neutral filename from a hash of story name + part + chapter + date (keeps chapters distinct)
-  const digest = await crypto.subtle.digest("SHA-256",
-    new TextEncoder().encode(story.scenario + "|" + story.part + "|" + story.title + "|" + story.date));
-  const short = [...new Uint8Array(digest)].slice(0,3)
-    .map(x=>x.toString(16).padStart(2,"0")).join("");
-  const fname = `story-${short}.json`;
-
-  const blob = new Blob([JSON.stringify(pkg)], {type:"application/json"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob); a.download = fname; a.click();
-  URL.revokeObjectURL(a.href);
-
-  msg.className="msg ok";
-  msg.textContent = `Sealed. Save ${fname} into the stories/ folder, then commit and push.`;
+    if(!window.crypto||!crypto.subtle){ msg.className="msg err";
+      msg.textContent="Open this page at its https:// address to encrypt."; return; }
+    let body=$("#body").value.trim();
+    const pass=$("#pass").value;
+    if(!body){ msg.className="msg err"; msg.textContent="Paste the story text first."; return; }
+    if(!$("#scenario").value.trim()){ msg.className="msg err"; msg.textContent="Fill in at least the Story Name."; return; }
+    if(pass.length<8){ msg.className="msg err"; msg.textContent="Passphrase needs at least 8 characters."; return; }
+    const pending=$("#tags").value.trim();
+    if(pending){ pending.split(",").forEach(addTag); $("#tags").value=""; }
+    body=body.replace(/^---\s*\n[\s\S]*?\n---\s*\n?/,"");
+    const story={
+      title:$("#title").value.trim(), part:$("#part").value.trim(),
+      character:$("#character").value.trim(), scenario:$("#scenario").value.trim(),
+      tags:curTags.slice(), status:$("#status").value.trim()||"complete",
+      date:$("#date").value||new Date().toISOString().slice(0,10),
+      summary:$("#summary").value.trim(), body
+    };
+    const salt=crypto.getRandomValues(new Uint8Array(16));
+    const iv=crypto.getRandomValues(new Uint8Array(12));
+    const key=await deriveKey(pass,salt);
+    const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,new TextEncoder().encode(JSON.stringify(story)));
+    const pkg={v:1,salt:b64(salt),iv:b64(iv),ct:b64(ct)};
+    const digest=await crypto.subtle.digest("SHA-256",
+      new TextEncoder().encode(story.scenario+"|"+story.part+"|"+story.title+"|"+story.date));
+    const short=[...new Uint8Array(digest)].slice(0,3).map(x=>x.toString(16).padStart(2,"0")).join("");
+    const fname=`story-${short}.json`;
+    const blob=new Blob([JSON.stringify(pkg)],{type:"application/json"});
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=fname; a.click();
+    URL.revokeObjectURL(a.href);
+    msg.className="msg ok";
+    msg.textContent=`Sealed. Save ${fname} to stories/, commit and push.`;
   }catch(err){
     msg.className="msg err";
-    msg.textContent = "Something went wrong: " + (err && err.message ? err.message : err) +
-      " — if this mentions 'crypto' or 'subtle', open this page via its https:// address rather than double-clicking the file.";
+    msg.textContent="Something went wrong: "+(err&&err.message?err.message:String(err));
   }
 };
 </script>
