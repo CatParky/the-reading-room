@@ -107,11 +107,6 @@
   .clear{font-family:var(--font-mono);font-size:.66rem;color:var(--oxblood);background:none;
     border:none;cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:0}
   .clear[hidden]{display:none}
-  .idx-row{display:flex;flex-direction:column;gap:.15rem;padding:.4rem 0;border-bottom:1px solid var(--rule);cursor:pointer}
-  .idx-row:last-child{border-bottom:none}
-  .idx-row:hover .idx-file{color:var(--oxblood)}
-  .idx-file{font-family:var(--font-mono);font-size:.64rem;color:var(--ink-faint);letter-spacing:.03em}
-  .idx-name{font-size:.82rem;color:var(--ink-soft)}
 
   .shelf{padding:1.6rem clamp(1rem,4vw,2.5rem)}
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(15rem,1fr));gap:1rem}
@@ -199,8 +194,10 @@
 
 <header class="masthead">
   <span class="wordmark">The Reading <em>Room</em></span>
+  <button class="pill" id="sortBtn" title="Cycle sort order">Newest</button>
   <button class="pill" id="themeBtn">Theme</button>
   <button class="pill" id="sizeBtn" aria-label="Cycle text size">Aa</button>
+  <a class="pill" href="story-index.html" style="text-decoration:none">Index</a>
   <button class="pill" id="lockBtn">Lock</button>
   <span class="tally" id="tally"></span>
 </header>
@@ -213,11 +210,6 @@
     <div class="facet"><h3>Tags</h3><div class="chips" id="f-tags"></div></div>
     <div class="facet"><h3>Status</h3><div class="chips" id="f-status"></div></div>
     <button class="clear" id="clear" hidden>Clear all filters</button>
-    <div class="facet" id="indexPanel" hidden>
-      <h3>Story index</h3>
-      <p style="font-size:.75rem;color:var(--ink-faint);font-style:italic;margin-bottom:.6rem;line-height:1.5">Filename → story, for editing and resealing</p>
-      <div id="indexList"></div>
-    </div>
   </aside>
   <main class="shelf"><div class="cards" id="cards"></div></main>
 </div>
@@ -263,6 +255,7 @@ let DATA = [];
 let PASS = null;
 const state = {q:"", character:new Set(), scenario:new Set(), tags:new Set(), status:new Set()};
 let current = null;
+let sortMode = localStorage.getItem("rr_sort") || "newest"; // newest | oldest | title
 const $ = s=>document.querySelector(s);
 
 /* ================= gate & loading ================= */
@@ -288,18 +281,24 @@ async function loadLibrary(pass){
     }catch(e){ failed++; }
   }
   if(files.length && out.length===0) throw new Error("wrongpass");
-  DATA = out.sort((a,b)=>{
-    // group by story name; within a story, order by part; across stories, newest first
-    const sa=(a.scenario||"").toLowerCase(), sb=(b.scenario||"").toLowerCase();
-    if(sa!==sb){
-      // sort stories by the most recent chapter date within each, newest first
-      return (b.date||"").localeCompare(a.date||"");
-    }
-    const pa=parseInt(a.part)||0, pb=parseInt(b.part)||0;
-    if(pa!==pb) return pa-pb;
-    return (a.date||"").localeCompare(b.date||"");
-  });
+  DATA = out;
   if(failed) console.warn(failed+" file(s) failed to decrypt");
+}
+
+function sortList(list){
+  return [...list].sort((a,b)=>{
+    const sa=(a.scenario||"").toLowerCase(), sb=(b.scenario||"").toLowerCase();
+    // within the same story, always sort by part number
+    if(sa===sb){
+      const pa=parseInt(a.part)||0, pb=parseInt(b.part)||0;
+      if(pa!==pb) return pa-pb;
+      return (a.date||"").localeCompare(b.date||"");
+    }
+    // across stories, sort by chosen mode
+    if(sortMode==="oldest") return (a.date||"").localeCompare(b.date||"");
+    if(sortMode==="title") return sa.localeCompare(sb);
+    return (b.date||"").localeCompare(a.date||""); // newest (default)
+  });
 }
 async function tryUnlock(pass, fromStorage){
   $("#gateErr").textContent = "";
@@ -367,7 +366,7 @@ function facet(key, elId){
   });
 }
 function buildFacets(){ facet("character","#f-character"); facet("scenario","#f-scenario");
-  facet("tags","#f-tags"); facet("status","#f-status"); buildIndex(); }
+  facet("tags","#f-tags"); facet("status","#f-status"); }
 function match(d){
   const ok=(k,val)=>state[k].size===0 || (Array.isArray(val)?val.some(v=>state[k].has(v)):state[k].has(val));
   if(!ok("character",d.character)||!ok("scenario",d.scenario)||!ok("status",d.status)) return false;
@@ -380,8 +379,18 @@ function match(d){
 }
 
 /* ================= shelf ================= */
+const SORT_MODES = ["newest","oldest","title"];
+const SORT_LABELS = {newest:"Newest",oldest:"Oldest",title:"A → Z"};
+function updateSortBtn(){ $("#sortBtn").textContent = SORT_LABELS[sortMode]; }
+$("#sortBtn").onclick = ()=>{
+  sortMode = SORT_MODES[(SORT_MODES.indexOf(sortMode)+1)%SORT_MODES.length];
+  localStorage.setItem("rr_sort", sortMode);
+  updateSortBtn(); render();
+};
+updateSortBtn();
+
 function render(){
-  const list = DATA.filter(match);
+  const list = sortList(DATA.filter(match));
   const cards = $("#cards"); cards.innerHTML = "";
   $("#tally").textContent = `${list.length} of ${DATA.length}`;
   const any = state.q||state.character.size||state.scenario.size||state.tags.size||state.status.size;
@@ -465,21 +474,6 @@ function updateChapterNav(d){
 }
 
 /* ================= story index ================= */
-function buildIndex(){
-  const panel=$("#indexPanel"), list=$("#indexList");
-  if(!panel||!list) return;
-  if(!DATA.length){ panel.hidden=true; return; }
-  panel.hidden=false;
-  list.innerHTML="";
-  const sorted=[...DATA].sort((a,b)=>(a._file||"").localeCompare(b._file||""));
-  sorted.forEach(d=>{
-    const row=document.createElement("div"); row.className="idx-row";
-    row.innerHTML=`<span class="idx-file">${esc(d._file||"—")}</span><span class="idx-name">${esc(d.scenario||d.title||"Untitled")}${d.part?" · Part "+esc(d.part):""}${d.title?" · "+esc(d.title):""}</span>`;
-    row.onclick=()=>openReader(d);
-    list.appendChild(row);
-  });
-}
-
 /* ================= reader ================= */
 function openReader(d){
   current = d;
