@@ -615,12 +615,16 @@ function freshState(title, created, turns){
   state = {
     title: title || 'Untitled',
     created: created || Math.floor(Date.now()/1000),
-    turns: turns.map(t => ({
-      user_prompt: t.user_prompt || '',
-      model_responses: (t.model_responses || []).slice(),
-      chosen: Math.max(0, (t.model_responses || []).length - 1),
-      included: true
-    }))
+    turns: turns.map(t => {
+      const prompt = t.user_prompt || t.userprompt || '';
+      const responses = (t.model_responses || t.modelresponses || []).slice();
+      return {
+        user_prompt: prompt,
+        model_responses: responses,
+        chosen: Math.max(0, responses.length - 1),
+        included: true
+      };
+    })
   };
 }
 
