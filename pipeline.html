@@ -230,6 +230,22 @@
   </div>
 </div>
 
+<!-- ============ COPY-FROM modal ============ -->
+<div class="modal" id="copyModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2>Copy details from…</h2>
+      <input type="password" id="copyModalPass" placeholder="passphrase" autocomplete="current-password">
+      <input type="text" id="copyModalFilter" placeholder="Filter by story name…" style="margin-top:.5rem">
+    </div>
+    <div class="modal-list" id="copyModalList"></div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="copyModalCancel">Cancel</button>
+      <button class="btn" id="copyModalLoad" disabled>Copy details</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============ STAGE 2 : CHECK ============ -->
 <div class="wrap stage" id="stage2">
   <h1>Check the <em>chat</em></h1>
@@ -293,6 +309,10 @@
       </div>
     </div>
     <div style="margin-top:.9rem"><label for="fmSummary">Summary (one line, shown on the shelf)</label><input type="text" id="fmSummary"></div>
+    <div style="margin-top:.9rem">
+      <button type="button" class="btn ghost small" id="copyFromStory">Copy details from existing story…</button>
+      <span id="copyFromMsg" style="font-family:var(--fm);font-size:.68rem;color:var(--faint);margin-left:.7rem"></span>
+    </div>
     <details id="fmTagMgr" style="margin-top:1rem;background:var(--raised);border:1px solid var(--rule);border-radius:.5rem;padding:0 1.1rem">
       <summary style="cursor:pointer;padding:.8rem 0;font-family:var(--fm);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--soft)">Manage your tag list</summary>
       <div style="padding:0 0 1rem"><p style="font-size:.85rem;color:var(--soft);font-style:italic;margin-bottom:.8rem;line-height:1.6">Your autocomplete list, kept on this device. Rename or delete entries to keep future tagging tidy. This does not change tags already sealed inside stories.</p><div id="fmMgrList"></div></div>
@@ -1491,6 +1511,126 @@ $('#editReseal').onclick = async ()=>{
 
 /* ---------- misc ---------- */
 function esc(t){ const d=document.createElement('div'); d.textContent=t==null?'':t; return d.innerHTML; }
+
+/* =====================================================================
+   COPY-FROM-STORY (Archive stage QOL)
+   ===================================================================== */
+(function(){
+  const ITER_CF = 310000;
+  let cfStories = null, cfSelected = null;
+
+  const unb64cf = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  async function deriveKeyCF(pass, salt){
+    const raw = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass),
+      'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({name:'PBKDF2', salt, iterations:ITER_CF, hash:'SHA-256'},
+      raw, {name:'AES-GCM', length:256}, false, ['decrypt']);
+  }
+
+  const modal      = document.getElementById('copyModal');
+  const passFld    = document.getElementById('copyModalPass');
+  const filterFld  = document.getElementById('copyModalFilter');
+  const listEl     = document.getElementById('copyModalList');
+  const loadBtn    = document.getElementById('copyModalLoad');
+  const cancelBtn  = document.getElementById('copyModalCancel');
+  const openBtn    = document.getElementById('copyFromStory');
+  const msgEl      = document.getElementById('copyFromMsg');
+
+  function cfMsg(t){ msgEl.textContent = t; setTimeout(()=>{ if(msgEl.textContent===t) msgEl.textContent=''; }, 3000); }
+
+  function renderCFList(){
+    const q = (filterFld.value||'').trim().toLowerCase();
+    listEl.innerHTML = '';
+    cfSelected = null; loadBtn.disabled = true;
+    if(!cfStories || !cfStories.length){
+      listEl.innerHTML = '<p style="padding:1rem;color:var(--faint);font-style:italic">No stories loaded yet.</p>';
+      return;
+    }
+    const shown = q ? cfStories.filter(s=>(s.scenario||'').toLowerCase().includes(q)) : cfStories;
+    if(!shown.length){
+      listEl.innerHTML = '<p style="padding:1rem;color:var(--faint);font-style:italic">Nothing matches.</p>';
+      return;
+    }
+    shown.forEach(s=>{
+      const div = document.createElement('div');
+      div.className = 'chat-item';
+      div.innerHTML = `<div class="chat-name">${esc(s.scenario||'Untitled')}</div>
+        <div class="chat-meta">${esc(s.character||'')}${s.tags&&s.tags.length?' · '+s.tags.join(', '):''}</div>`;
+      div.onclick = ()=>{
+        cfSelected = s;
+        listEl.querySelectorAll('.chat-item').forEach(el=>el.classList.remove('sel'));
+        div.classList.add('sel');
+        loadBtn.disabled = false;
+      };
+      listEl.appendChild(div);
+    });
+  }
+
+  async function loadCFStories(){
+    listEl.innerHTML = '<p style="padding:1rem;color:var(--faint);font-style:italic">Fetching…</p>';
+    loadBtn.disabled = true;
+    const pass = passFld.value;
+    if(!pass){ listEl.innerHTML = '<p style="padding:1rem;color:var(--ox);font-style:italic">Enter your passphrase above first.</p>'; return; }
+    let manifest;
+    try{ manifest = await (await fetch('./manifest.json', {cache:'no-store'})).json(); }
+    catch(e){ listEl.innerHTML = '<p style="padding:1rem;color:var(--ox);font-style:italic">Could not load manifest.json.</p>'; return; }
+    const files = manifest.stories || [];
+    const out = []; let failed = 0;
+    for(let i=0; i<files.length; i++){
+      listEl.innerHTML = `<p style="padding:1rem;color:var(--faint);font-style:italic">Unlocking ${i+1} of ${files.length}…</p>`;
+      try{
+        const pkg = await (await fetch(`./stories/${files[i]}`, {cache:'no-store'})).json();
+        const key = await deriveKeyCF(pass, unb64cf(pkg.salt));
+        const pt  = await crypto.subtle.decrypt({name:'AES-GCM', iv:unb64cf(pkg.iv)}, key, unb64cf(pkg.ct));
+        const story = JSON.parse(new TextDecoder().decode(pt));
+        story._file = files[i];
+        out.push(story);
+      }catch(e){ failed++; }
+    }
+    if(files.length && out.length === 0){
+      listEl.innerHTML = '<p style="padding:1rem;color:var(--ox);font-style:italic">Wrong passphrase — nothing unlocked.</p>';
+      return;
+    }
+    // Deduplicate by scenario name, keep most recent
+    const seen = {};
+    out.forEach(s=>{
+      const k = (s.scenario||'').toLowerCase();
+      if(!seen[k] || (s.date||'') > (seen[k].date||'')) seen[k] = s;
+    });
+    cfStories = Object.values(seen).sort((a,b)=>(a.scenario||'').localeCompare(b.scenario||''));
+    if(failed) console.warn(failed+' file(s) failed to decrypt');
+    renderCFList();
+  }
+
+  openBtn.onclick = ()=>{
+    cfStories = null; cfSelected = null;
+    filterFld.value = ''; passFld.value = '';
+    listEl.innerHTML = '<p style="padding:1rem;color:var(--faint);font-style:italic">Enter your passphrase and press Enter to load stories.</p>';
+    loadBtn.disabled = true;
+    modal.classList.add('on');
+    passFld.focus();
+  };
+
+  passFld.addEventListener('keydown', e=>{ if(e.key==='Enter') loadCFStories(); });
+  filterFld.addEventListener('input', renderCFList);
+
+  cancelBtn.onclick = ()=>{ modal.classList.remove('on'); };
+
+  loadBtn.onclick = ()=>{
+    if(!cfSelected) return;
+    const s = cfSelected;
+    if(!document.getElementById('fmScenario').value.trim())
+      document.getElementById('fmScenario').value = s.scenario || '';
+    if(!document.getElementById('fmCharacter').value.trim())
+      document.getElementById('fmCharacter').value = s.character || '';
+    if(!document.getElementById('fmSummary').value.trim())
+      document.getElementById('fmSummary').value = s.summary || '';
+    if(fmTags.get().length === 0 && s.tags && s.tags.length)
+      fmTags.setAll(s.tags);
+    modal.classList.remove('on');
+    cfMsg('Details copied from "' + (s.scenario||'story') + '".');
+  };
+})();
 </script>
 </body>
 </html>
