@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "stories/**"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -12,21 +13,41 @@ permissions:
 jobs:
   manifest:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4.2.2
+
       - name: Build manifest.json
         run: |
           python3 - <<'EOF'
-          import json, os
-          files = sorted(f for f in os.listdir("stories") if f.endswith(".json"))
-          with open("manifest.json", "w") as fh:
+          import json
+          from pathlib import Path
+
+          stories_dir = Path("stories")
+          files = sorted(
+              path.name
+              for path in stories_dir.glob("story-*.json")
+              if path.is_file()
+          ) if stories_dir.is_dir() else []
+
+          with open("manifest.json", "w", encoding="utf-8") as fh:
               json.dump({"stories": files}, fh, indent=2)
-          print(f"Manifest lists {len(files)} story file(s)")
+              fh.write("\n")
+
+          print(f"Manifest lists {len(files)} sealed story file(s)")
           EOF
+
       - name: Commit manifest if changed
         run: |
           git config user.name "reading-room-bot"
           git config user.email "actions@users.noreply.github.com"
+
           git add manifest.json
-          git diff --cached --quiet && echo "No change" || git commit -m "Rebuild manifest"
+
+          if git diff --cached --quiet; then
+            echo "Manifest already up to date."
+            exit 0
+          fi
+
+          git commit -m "Rebuild manifest"
           git push
