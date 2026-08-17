@@ -237,7 +237,7 @@ function renderTable(){
     const tr=document.createElement("tr");
     const chap = [d.part?"Part "+esc(d.part):null, d.title?esc(d.title):null].filter(Boolean).join(" · ");
     tr.innerHTML=`
-      <td><span class="f-file">${esc(d._file||"—")}</span></td>
+      <td><span class="f-file" title="Click to copy" onclick="navigator.clipboard.writeText(this.textContent).then(()=>{this.style.color='var(--oxblood)';setTimeout(()=>this.style.color='',1200);})">${esc(d._file||"—")}</span></td>
       <td><span class="f-story">${esc(d.scenario||d.title||"Untitled")}</span></td>
       <td><span class="f-chapter">${chap||"—"}</span></td>
       <td class="hide-mobile"><span class="f-date">${esc(d.date||"—")}</span></td>
