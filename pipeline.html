@@ -684,18 +684,39 @@ function routeJSON(data, filename){
     say('');
     return;
   }
-  // Own pipeline / converter format: {conversation, turns}
-  if(data.turns && Array.isArray(data.turns)){
-    const conv = data.conversation || data.metadata || {};
-    startCheck(conv.title, conv.creation_timestamp, data.turns, false);
-    return;
+// Pipeline and previous-source exports with a turns array.
+// Supports both one `modelresponse` and several `modelresponses`.
+// The full response array is retained so Check can offer a version chooser.
+if (Array.isArray(data.turns)) {
+  const conv = data.conversation || data.metadata || {};
+
+  const turns = data.turns.map(t => {
+    const rawResponses = Array.isArray(t.modelresponses)
+      ? t.modelresponses
+      : t.modelresponse != null
+        ? [t.modelresponse]
+        : [];
+
+    return {
+      userprompt: String(t.userprompt || "").trim(),
+      modelresponses: rawResponses
+        .map(response => String(response || "").trim())
+        .filter(Boolean)
+    };
+  }).filter(t => t.userprompt || t.modelresponses.length);
+
+  if (!turns.length) {
+    throw new Error("This JSON has turns, but none contained readable text.");
   }
-  // Previously extracted format: {metadata, turns:[{turn_number, user_prompt, model_response}]}
-  if(data.metadata && Array.isArray(data.turns) && data.turns.length && 'model_response' in data.turns[0]){
-    const turns = data.turns.map(t=>({user_prompt:t.user_prompt||'', model_responses:t.model_response?[t.model_response]:[]}));
-    startCheck(data.metadata.title, data.metadata.creation_timestamp, turns, false);
-    return;
-  }
+
+  startCheck(
+    conv.title || filename.replace(/\.json$/i, ""),
+    conv.creationtimestamp || null,
+    turns,
+    false
+  );
+  return;
+}
   // Exporter format: {metadata, messages:[{role, say}]}
   if(data.messages && Array.isArray(data.messages)){
     const turns = [];
