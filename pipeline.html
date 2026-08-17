@@ -706,19 +706,25 @@ function routeJSON(data, filename){
   }
 // Pipeline and previous-source exports with a turns array.
 // Supports both one `modelresponse` and several `modelresponses`.
+// Also supports underscore variants (user_prompt, model_responses) from
+// third-party exporters such as Nessie Labs.
 // The full response array is retained so Check can offer a version chooser.
 if (Array.isArray(data.turns)) {
   const conv = data.conversation || data.metadata || {};
 
   const turns = data.turns.map(t => {
-    const rawResponses = Array.isArray(t.modelresponses)
-      ? t.modelresponses
-      : t.modelresponse != null
-        ? [t.modelresponse]
-        : [];
+    const rawResponses = Array.isArray(t.model_responses)
+      ? t.model_responses
+      : Array.isArray(t.modelresponses)
+        ? t.modelresponses
+        : (t.model_response != null)
+          ? [t.model_response]
+          : (t.modelresponse != null)
+            ? [t.modelresponse]
+            : [];
 
     return {
-      userprompt: String(t.userprompt || "").trim(),
+      userprompt: String(t.user_prompt || t.userprompt || "").trim(),
       modelresponses: rawResponses
         .map(response => String(response || "").trim())
         .filter(Boolean)
