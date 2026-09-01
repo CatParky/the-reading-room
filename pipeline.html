@@ -109,6 +109,8 @@
   input:focus-visible,textarea:focus-visible{outline:2px solid var(--ox);outline-offset:1px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:.9rem}
   .grid3{display:grid;grid-template-columns:1fr 1fr auto;gap:.9rem;align-items:end}
+  .gridPC{display:grid;grid-template-columns:6rem 1fr;gap:.9rem}
+  @media(max-width:600px){.gridPC{grid-template-columns:1fr}}
   @media(max-width:600px){.grid2,.grid3{grid-template-columns:1fr}}
   .counts{display:flex;gap:1.4rem;flex-wrap:wrap;font-family:var(--fm);
     font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--soft);
@@ -155,6 +157,42 @@
   .msgline.ok{color:var(--sage)} .msgline.err{color:var(--ox)}
   .exports{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:.9rem}
   .stage{display:none} .stage.on{display:block}
+
+  /* ---------- dark / night themes ---------- */
+  [data-theme="dark"]{
+    --paper:#1e1c1a; --raised:#28251f;
+    --ink:#d8d0c4; --soft:#a09686; --faint:#706558;
+    --rule:#3a352e; --ox:#c45c52; --oxs:#d4736a;
+    --sage:#8aad7f; --shadow:rgba(0,0,0,.30);
+  }
+  [data-theme="night"]{
+    --paper:#12110f; --raised:#1a1815;
+    --ink:#c4baa8; --soft:#8a7e6e; --faint:#5e5548;
+    --rule:#2e2a24; --ox:#b84e44; --oxs:#ca6a62;
+    --sage:#7a9d6f; --shadow:rgba(0,0,0,.45);
+  }
+
+  /* ---------- tag chips ---------- */
+  .tag-wrap{position:relative}
+  .tag-chips{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.4rem;min-height:0}
+  .tag-chip{display:inline-flex;align-items:center;gap:.3rem;background:var(--ox);
+    color:var(--raised);font-family:var(--fm);font-size:.64rem;letter-spacing:.08em;
+    text-transform:lowercase;padding:.2rem .55rem;border-radius:1rem;white-space:nowrap}
+  .tag-chip .x{cursor:pointer;opacity:.7;font-size:.8rem;line-height:1}
+  .tag-chip .x:hover{opacity:1}
+  .tag-dd{position:absolute;left:0;right:0;top:100%;background:var(--raised);
+    border:1px solid var(--rule);border-radius:0 0 .5rem .5rem;max-height:12rem;
+    overflow-y:auto;z-index:20;display:none}
+  .tag-dd.open{display:block}
+  .tag-dd-item{padding:.45rem .8rem;cursor:pointer;font-size:.9rem}
+  .tag-dd-item:hover,.tag-dd-item.hl{background:var(--paper)}
+  .tag-dd-item.add{color:var(--sage);font-style:italic}
+
+  /* ---------- theme button ---------- */
+  .theme-btn{font-family:var(--fm);font-size:.66rem;letter-spacing:.12em;
+    text-transform:uppercase;background:none;border:1px solid var(--rule);
+    color:var(--soft);border-radius:1rem;padding:.3rem .8rem;cursor:pointer}
+  .theme-btn:hover{color:var(--ox);border-color:var(--ox)}
 </style>
 </head>
 <body>
@@ -165,7 +203,9 @@
   <a class="link" href="landing.html">Home</a>
   <a class="link active" href="pipeline.html">Pipeline</a>
   <a class="link" href="pipeline.html#edit" id="editNav">Edit sealed</a>
+  <a class="link" href="story-index.html">Index</a>
   <a class="link" href="https://catparky.github.io/the-reading-room/">Library</a>
+  <button class="theme-btn" id="themeBtn">Theme</button>
 </nav>
 
 <div class="steps">
@@ -208,6 +248,22 @@
     <div class="modal-foot">
       <button class="btn ghost" id="chatCancel">Cancel</button>
       <button class="btn" id="chatLoad">Open chat</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ COPY-FROM modal ============ -->
+<div class="modal" id="copyModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2>Copy details from…</h2>
+      <input type="password" id="copyModalPass" placeholder="passphrase" autocomplete="current-password">
+      <input type="text" id="copyModalFilter" placeholder="Filter by story name…" style="margin-top:.5rem">
+    </div>
+    <div class="modal-list" id="copyModalList"></div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="copyModalCancel">Cancel</button>
+      <button class="btn" id="copyModalLoad" disabled>Copy details</button>
     </div>
   </div>
 </div>
@@ -260,13 +316,25 @@
     </div>
     <div class="grid2" style="margin-top:.9rem">
       <div><label for="fmCharacter">Character</label><input type="text" id="fmCharacter"></div>
-      <div><label for="fmScenario">Scenario</label><input type="text" id="fmScenario"></div>
+      <div><label for="fmScenario">Story Name</label><input type="text" id="fmScenario"></div>
+    </div>
+    <div class="gridPC" style="margin-top:.9rem">
+      <div><label for="fmPart">Part</label><input type="number" id="fmPart" min="1" step="1"></div>
+      <div><label for="fmChapter">Chapter Title</label><input type="text" id="fmChapter"></div>
     </div>
     <div class="grid2" style="margin-top:.9rem">
-      <div><label for="fmTags">Tags (comma separated — these drive the filters)</label><input type="text" id="fmTags"></div>
+      <div class="tag-wrap"><label for="fmTags">Tags (type to search)</label>
+        <div class="tag-chips" id="fmTagChips"></div>
+        <input type="text" id="fmTags" autocomplete="off" placeholder="Start typing…">
+        <div class="tag-dd" id="fmTagDD"></div>
+      </div>
       <div><label for="fmStatus">Status</label><input type="text" id="fmStatus" value="complete"></div>
     </div>
     <div style="margin-top:.9rem"><label for="fmSummary">Summary (one line, shown on the shelf)</label><input type="text" id="fmSummary"></div>
+    <div style="margin-top:.9rem">
+      <button type="button" class="btn ghost small" id="copyFromStory">Copy details from existing story…</button>
+      <span id="copyFromMsg" style="font-family:var(--fm);font-size:.68rem;color:var(--faint);margin-left:.7rem"></span>
+    </div>
     <div style="margin-top:.9rem"><label for="pass">Passphrase</label>
       <input type="password" id="pass" autocomplete="new-password">
       <p class="footer-note" style="margin-top:.3rem">Must be the same passphrase every time. It is never stored and never recoverable.</p>
@@ -326,10 +394,18 @@
       </div>
       <div class="grid2" style="margin-top:.9rem">
         <div><label for="eCharacter">Character</label><input type="text" id="eCharacter"></div>
-        <div><label for="eScenario">Scenario</label><input type="text" id="eScenario"></div>
+        <div><label for="eScenario">Story Name</label><input type="text" id="eScenario"></div>
+      </div>
+      <div class="gridPC" style="margin-top:.9rem">
+        <div><label for="ePart">Part</label><input type="number" id="ePart" min="1" step="1"></div>
+        <div><label for="eChapter">Chapter Title</label><input type="text" id="eChapter"></div>
       </div>
       <div class="grid2" style="margin-top:.9rem">
-        <div><label for="eTags">Tags (comma separated)</label><input type="text" id="eTags"></div>
+        <div class="tag-wrap"><label for="eTags">Tags (type to search)</label>
+          <div class="tag-chips" id="eTagChips"></div>
+          <input type="text" id="eTags" autocomplete="off" placeholder="Start typing…">
+          <div class="tag-dd" id="eTagDD"></div>
+        </div>
         <div><label for="eStatus">Status</label><input type="text" id="eStatus"></div>
       </div>
       <div style="margin-top:.9rem"><label for="eSummary">Summary</label><input type="text" id="eSummary"></div>
@@ -373,12 +449,16 @@ function freshState(title, created, turns){
   state = {
     title: title || 'Untitled',
     created: created || Math.floor(Date.now()/1000),
-    turns: turns.map(t => ({
-      user_prompt: t.user_prompt || '',
-      model_responses: (t.model_responses || []).slice(),
-      chosen: Math.max(0, (t.model_responses || []).length - 1),
-      included: true
-    }))
+    turns: turns.map(t => {
+      const prompt = t.user_prompt || t.userprompt || '';
+      const responses = (t.model_responses || t.modelresponses || []).slice();
+      return {
+        user_prompt: prompt,
+        model_responses: responses,
+        chosen: Math.max(0, responses.length - 1),
+        included: true
+      };
+    })
   };
 }
 
@@ -447,16 +527,13 @@ async function route(file){
 async function routeZip(file){
   say('Opening archive…');
   const zip = await JSZip.loadAsync(file);
-  // Look for conversations.json first (old format)
   let entry = null;
   zip.forEach((path, f)=>{ if(!entry && /(^|\/)conversations\.json$/i.test(path)) entry = f; });
-  // Fallback: any .json file in the archive
   if(!entry){
     const jsonFiles = [];
     zip.forEach((path, f)=>{ if(/\.json$/i.test(path) && !f.dir) jsonFiles.push(f); });
     if(jsonFiles.length === 1) entry = jsonFiles[0];
     else if(jsonFiles.length > 1){
-      // Prefer the largest JSON file (likely the conversations data)
       let biggest = null, biggestSize = 0;
       for(const jf of jsonFiles){
         const size = jf._data ? (jf._data.uncompressedSize || 0) : 0;
@@ -508,47 +585,6 @@ function routeJSON(data, filename){
     return;
   }
   throw new Error('Unrecognised JSON structure.');
-}
-
-function showManifest(manifest){
-  const convFile = manifest.data_files.find(f => f.category === 'conversations');
-  const projFile = manifest.data_files.find(f => f.category === 'projects');
-  const created = manifest.created_at ? new Date(manifest.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : 'unknown date';
-
-  let html = `<div class="panel" style="margin-top:1.2rem">
-    <p style="margin-bottom:.8rem">This is an <b style="color:var(--ox)">Anthropic export manifest</b> from ${created}
-    — it contains download links, not the conversations themselves.</p>
-    <p style="margin-bottom:1rem">Download the file${projFile ? 's' : ''} below in your browser, then drop the zip${projFile ? '(s)' : ''} back here.</p>
-    <div style="display:flex;flex-direction:column;gap:.6rem">`;
-
-  for(const f of manifest.data_files){
-    const icon = f.category === 'conversations' ? '💬' :
-                 f.category === 'projects' ? '📂' :
-                 f.category === 'memories' ? '🧠' : '📋';
-    const useful = (f.category === 'conversations' || f.category === 'projects');
-    html += `<div style="display:flex;align-items:center;gap:.8rem;padding:.6rem .8rem;
-      background:var(--paper);border:1px solid var(--rule);border-radius:.5rem;
-      ${useful ? '' : 'opacity:.5'}">
-      <span style="font-size:1.2rem">${icon}</span>
-      <div style="flex:1">
-        <div style="font-family:var(--fm);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:${useful ? 'var(--ox)' : 'var(--faint)'}">${f.category}</div>
-        <div style="font-size:.82rem;color:var(--soft)">${f.filename}</div>
-      </div>
-      <a href="${f.export_url}" target="_blank" class="btn small${useful ? '' : ' ghost'}" 
-        style="text-decoration:none">Download</a>
-    </div>`;
-  }
-
-  html += `</div>
-    <p style="margin-top:1rem;font-size:.82rem;color:var(--faint);font-style:italic">
-      ⚠ Each download link can only be used once. The <b>conversations</b>${projFile ? ' and <b>projects</b>' : ''} zip${projFile ? 's contain' : ' contains'} your chats.</p>
-  </div>`;
-
-  // Show in stage 1 area
-  const container = document.createElement('div');
-  container.innerHTML = html;
-  stage1.querySelector('.drop').insertAdjacentElement('afterend', container);
-  say('Export manifest detected — download the conversations zip, then drop it here.');
 }
 
 function routeText(content, filename){
@@ -1009,7 +1045,9 @@ function frontmatter(){
     `title: ${$('#fmTitle').value.trim()}\n`+
     `character: ${$('#fmCharacter').value.trim()}\n`+
     `scenario: ${$('#fmScenario').value.trim()}\n`+
-    `tags: ${$('#fmTags').value.trim()}\n`+
+    `part: ${$('#fmPart').value||''}\n`+
+    `chapter: ${$('#fmChapter').value.trim()}\n`+
+    `tags: ${fmTags.get().join(', ')}\n`+
     `status: ${$('#fmStatus').value.trim()||'complete'}\n`+
     `date: ${$('#fmDate').value||new Date().toISOString().slice(0,10)}\n`+
     `summary: ${$('#fmSummary').value.trim()}\n`+
@@ -1052,7 +1090,8 @@ $('#expTxt').onclick = ()=>{ const {title,dateStr}=fileBasics();
 $('#expJson').onclick = ()=>{ const {title}=fileBasics();
   const data={ metadata:{ title, creation_timestamp:state.created,
       character:$('#fmCharacter').value.trim(), scenario:$('#fmScenario').value.trim(),
-      tags:$('#fmTags').value.split(',').map(s=>s.trim()).filter(Boolean),
+      part:parseInt($('#fmPart').value)||null, chapter:$('#fmChapter').value.trim(),
+      tags:fmTags.get(),
       status:$('#fmStatus').value.trim()||'complete', summary:$('#fmSummary').value.trim() },
     turns: exportTurns().map((t,i)=>({ turn_number:i+1, user_prompt:t.user_prompt,
       model_response:t.model_responses[t.chosen]||null })) };
@@ -1092,7 +1131,9 @@ $('#sealBtn').onclick = async ()=>{
       title: $('#fmTitle').value.trim(),
       character: $('#fmCharacter').value.trim(),
       scenario: $('#fmScenario').value.trim(),
-      tags: $('#fmTags').value.split(',').map(s=>s.trim()).filter(Boolean),
+      part: parseInt($('#fmPart').value)||null,
+      chapter: $('#fmChapter').value.trim(),
+      tags: fmTags.get(),
       status: $('#fmStatus').value.trim() || 'complete',
       date: $('#fmDate').value || new Date().toISOString().slice(0,10),
       summary: $('#fmSummary').value.trim(),
@@ -1191,7 +1232,9 @@ $('#editUnseal').onclick = async ()=>{
     $('#eDate').value = story.date || '';
     $('#eCharacter').value = story.character || '';
     $('#eScenario').value = story.scenario || '';
-    $('#eTags').value = Array.isArray(story.tags) ? story.tags.join(', ') : (story.tags || '');
+    $('#ePart').value = story.part || '';
+    $('#eChapter').value = story.chapter || '';
+    eTags.setAll(Array.isArray(story.tags) ? story.tags : (story.tags||'').split(',').map(s=>s.trim()).filter(Boolean));
     $('#eStatus').value = story.status || 'complete';
     $('#eSummary').value = story.summary || '';
     $('#eBody').value = story.body || '';
@@ -1212,7 +1255,7 @@ $('#editCancel').onclick = ()=>{
   $('#editPickedName').textContent = '';
   $('#editUnseal').disabled = true;
   $('#editPass').value = '';
-  ['eTitle','eDate','eCharacter','eScenario','eTags','eStatus','eSummary','eBody']
+  ['eTitle','eDate','eCharacter','eScenario','ePart','eChapter','eStatus','eSummary','eBody']
     .forEach(id=>{ $('#'+id).value = id==='eStatus' ? 'complete' : ''; });
   $('#editOpenPanel').hidden = false;
   $('#editFormPanel').hidden = true;
@@ -1232,7 +1275,9 @@ $('#editReseal').onclick = async ()=>{
       title: $('#eTitle').value.trim(),
       character: $('#eCharacter').value.trim(),
       scenario: $('#eScenario').value.trim(),
-      tags: $('#eTags').value.split(',').map(s=>s.trim()).filter(Boolean),
+      part: parseInt($('#ePart').value)||null,
+      chapter: $('#eChapter').value.trim(),
+      tags: eTags.get(),
       status: $('#eStatus').value.trim() || 'complete',
       date: $('#eDate').value || new Date().toISOString().slice(0,10),
       summary: $('#eSummary').value.trim(),
@@ -1262,6 +1307,272 @@ $('#editReseal').onclick = async ()=>{
     editMsg('Something went wrong: '+(err&&err.message?err.message:err),'err',msg);
   }
 };
+
+
+
+/* =====================================================================
+   THEMES
+   ===================================================================== */
+(function(){
+  const THEMES = ['light','dark','night'];
+  function setTheme(t){ document.documentElement.dataset.theme = t; localStorage.setItem('rr_theme', t); }
+  function cycleTheme(){ const cur = document.documentElement.dataset.theme || 'light';
+    setTheme(THEMES[(THEMES.indexOf(cur)+1)%THEMES.length]); }
+  $('#themeBtn').onclick = cycleTheme;
+  setTheme(localStorage.getItem('rr_theme') ||
+    (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light'));
+})();
+
+/* =====================================================================
+   TAG AUTOCOMPLETE WIDGET
+   ===================================================================== */
+function TagWidget(inputId, chipsId, ddId){
+  const inp = document.getElementById(inputId);
+  const chipsEl = document.getElementById(chipsId);
+  const dd = document.getElementById(ddId);
+  let chosen = [], library = [], hlIdx = -1;
+
+  // Fetch tag library from repo
+  fetch('https://catparky.github.io/the-reading-room/tags.txt', {cache:'no-store'})
+    .then(r => r.ok ? r.text() : '')
+    .then(t => {
+      library = t.split('\n').map(s=>s.trim().toLowerCase()).filter(Boolean);
+      library.sort();
+      localStorage.setItem('rr_tag_library', JSON.stringify(library));
+    })
+    .catch(() => {
+      try{ library = JSON.parse(localStorage.getItem('rr_tag_library')||'[]'); }catch(e){ library=[]; }
+    });
+
+  function renderChips(){
+    chipsEl.innerHTML = '';
+    chosen.forEach(tag => {
+      const chip = document.createElement('span');
+      chip.className = 'tag-chip';
+      chip.innerHTML = tag + ' <span class="x">&times;</span>';
+      chip.querySelector('.x').onclick = () => { chosen = chosen.filter(t=>t!==tag); renderChips(); };
+      chipsEl.appendChild(chip);
+    });
+  }
+
+  function renderDD(){
+    const q = inp.value.trim().toLowerCase();
+    dd.innerHTML = '';
+    hlIdx = -1;
+    if(!q){ dd.classList.remove('open'); return; }
+    const matches = library.filter(t => t.includes(q) && !chosen.includes(t));
+    matches.slice(0,8).forEach(t => {
+      const div = document.createElement('div');
+      div.className = 'tag-dd-item';
+      div.textContent = t;
+      div.onmousedown = e => { e.preventDefault(); addTag(t); };
+      dd.appendChild(div);
+    });
+    if(!matches.includes(q) && !chosen.includes(q)){
+      const div = document.createElement('div');
+      div.className = 'tag-dd-item add';
+      div.textContent = '+ add "' + q + '"';
+      div.onmousedown = e => { e.preventDefault(); addTag(q); };
+      dd.appendChild(div);
+    }
+    dd.classList.toggle('open', dd.children.length > 0);
+  }
+
+  function addTag(t){
+    t = t.toLowerCase().trim();
+    if(t && !chosen.includes(t)) chosen.push(t);
+    inp.value = '';
+    dd.classList.remove('open');
+    renderChips();
+  }
+
+  inp.addEventListener('input', renderDD);
+  inp.addEventListener('focus', renderDD);
+  inp.addEventListener('blur', () => setTimeout(()=>dd.classList.remove('open'), 150));
+  inp.addEventListener('keydown', e => {
+    const items = dd.querySelectorAll('.tag-dd-item');
+    if(e.key === 'ArrowDown'){ e.preventDefault(); hlIdx = Math.min(hlIdx+1, items.length-1);
+      items.forEach((it,i) => it.classList.toggle('hl', i===hlIdx)); }
+    else if(e.key === 'ArrowUp'){ e.preventDefault(); hlIdx = Math.max(hlIdx-1, 0);
+      items.forEach((it,i) => it.classList.toggle('hl', i===hlIdx)); }
+    else if(e.key === 'Enter'){ e.preventDefault();
+      if(hlIdx >= 0 && items[hlIdx]) items[hlIdx].onmousedown({preventDefault:()=>{}});
+      else if(inp.value.trim()) addTag(inp.value.trim()); }
+    else if(e.key === 'Backspace' && !inp.value && chosen.length){ chosen.pop(); renderChips(); }
+  });
+
+  return {
+    get: () => chosen.slice(),
+    setAll: (tags) => { chosen = (tags||[]).map(t=>t.toLowerCase().trim()).filter(Boolean); renderChips(); },
+    clear: () => { chosen = []; renderChips(); }
+  };
+}
+
+const fmTags = TagWidget('fmTags', 'fmTagChips', 'fmTagDD');
+const eTags = TagWidget('eTags', 'eTagChips', 'eTagDD');
+
+/* =====================================================================
+   SHOW MANIFEST (Anthropic export, Sept 2025+ format)
+   ===================================================================== */
+function showManifest(manifest){
+  const convFile = manifest.data_files.find(f => f.category === 'conversations');
+  const projFile = manifest.data_files.find(f => f.category === 'projects');
+  const created = manifest.created_at ? new Date(manifest.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : 'unknown date';
+
+  let html = `<div class="panel" style="margin-top:1.2rem">
+    <p style="margin-bottom:.8rem">This is an <b style="color:var(--ox)">Anthropic export manifest</b> from ${created}
+    — it contains download links, not the conversations themselves.</p>
+    <p style="margin-bottom:1rem">Download the file${projFile ? 's' : ''} below in your browser, then drop the zip${projFile ? '(s)' : ''} back here.</p>
+    <div style="display:flex;flex-direction:column;gap:.6rem">`;
+
+  for(const f of manifest.data_files){
+    const icon = f.category === 'conversations' ? '\u{1F4AC}' :
+                 f.category === 'projects' ? '\u{1F4C2}' :
+                 f.category === 'memories' ? '\u{1F9E0}' : '\u{1F4CB}';
+    const useful = (f.category === 'conversations' || f.category === 'projects');
+    html += `<div style="display:flex;align-items:center;gap:.8rem;padding:.6rem .8rem;
+      background:var(--paper);border:1px solid var(--rule);border-radius:.5rem;
+      ${useful ? '' : 'opacity:.5'}">
+      <span style="font-size:1.2rem">${icon}</span>
+      <div style="flex:1">
+        <div style="font-family:var(--fm);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:${useful ? 'var(--ox)' : 'var(--faint)'}">${f.category}</div>
+        <div style="font-size:.82rem;color:var(--soft)">${f.filename}</div>
+      </div>
+      <a href="${f.export_url}" target="_blank" class="btn small${useful ? '' : ' ghost'}"
+        style="text-decoration:none">Download</a>
+    </div>`;
+  }
+
+  html += `</div>
+    <p style="margin-top:1rem;font-size:.82rem;color:var(--faint);font-style:italic">
+      \u26A0 Each download link can only be used once. The <b>conversations</b>${projFile ? ' and <b>projects</b>' : ''} zip${projFile ? 's contain' : ' contains'} your chats.</p>
+  </div>`;
+
+  const container = document.createElement('div');
+  container.innerHTML = html;
+  stage1.querySelector('.drop').insertAdjacentElement('afterend', container);
+  say('Export manifest detected — download the conversations zip, then drop it here.');
+}
+
+/* =====================================================================
+   COPY-FROM-STORY (Archive stage QOL)
+   ===================================================================== */
+(function(){
+  const ITER_CF = 310000;
+  let cfStories = null, cfSelected = null;
+
+  const unb64cf = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  async function deriveKeyCF(pass, salt){
+    const raw = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass),
+      'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({name:'PBKDF2', salt, iterations:ITER_CF, hash:'SHA-256'},
+      raw, {name:'AES-GCM', length:256}, false, ['decrypt']);
+  }
+
+  const modal      = document.getElementById('copyModal');
+  const passFld    = document.getElementById('copyModalPass');
+  const filterFld  = document.getElementById('copyModalFilter');
+  const listEl     = document.getElementById('copyModalList');
+  const loadBtn    = document.getElementById('copyModalLoad');
+  const cancelBtn  = document.getElementById('copyModalCancel');
+  const openBtn    = document.getElementById('copyFromStory');
+  const msgEl      = document.getElementById('copyFromMsg');
+
+  function cfMsg(t){ msgEl.textContent = t; setTimeout(()=>{ if(msgEl.textContent===t) msgEl.textContent=''; }, 3000); }
+
+  function renderCFList(){
+    const q = (filterFld.value||'').trim().toLowerCase();
+    listEl.innerHTML = '';
+    cfSelected = null; loadBtn.disabled = true;
+    if(!cfStories || !cfStories.length){
+      listEl.innerHTML = '<p style="padding:1rem;color:var(--faint);font-style:italic">No stories loaded yet.</p>';
+      return;
+    }
+    const shown = q ? cfStories.filter(s=>(s.scenario||'').toLowerCase().includes(q)) : cfStories;
+    if(!shown.length){
+      listEl.innerHTML = '<p style="padding:1rem;color:var(--faint);font-style:italic">Nothing matches.</p>';
+      return;
+    }
+    shown.forEach(s=>{
+      const div = document.createElement('div');
+      div.className = 'chat-item';
+      div.innerHTML = `<div class="chat-name">${esc(s.scenario||'Untitled')}</div>
+        <div class="chat-meta">${esc(s.character||'')}${s.tags&&s.tags.length?' \u00B7 '+s.tags.join(', '):''}</div>`;
+      div.onclick = ()=>{
+        cfSelected = s;
+        listEl.querySelectorAll('.chat-item').forEach(el=>el.classList.remove('sel'));
+        div.classList.add('sel');
+        loadBtn.disabled = false;
+      };
+      listEl.appendChild(div);
+    });
+  }
+
+  async function loadCFStories(){
+    listEl.innerHTML = '<p style="padding:1rem;color:var(--faint);font-style:italic">Fetching\u2026</p>';
+    loadBtn.disabled = true;
+    const pass = passFld.value;
+    if(!pass){ listEl.innerHTML = '<p style="padding:1rem;color:var(--ox);font-style:italic">Enter your passphrase above first.</p>'; return; }
+    let manifest;
+    try{
+      manifest = await (await fetch('https://catparky.github.io/the-reading-room/manifest.json', {cache:'no-store'})).json();
+    }catch(e){ listEl.innerHTML = '<p style="padding:1rem;color:var(--ox);font-style:italic">Could not load manifest.json.</p>'; return; }
+    const files = manifest.stories || [];
+    const out = []; let failed = 0;
+    for(let i=0; i<files.length; i++){
+      listEl.innerHTML = `<p style="padding:1rem;color:var(--faint);font-style:italic">Unlocking ${i+1} of ${files.length}\u2026</p>`;
+      try{
+        const pkg = await (await fetch(`https://catparky.github.io/the-reading-room/stories/${files[i]}`, {cache:'no-store'})).json();
+        const key = await deriveKeyCF(pass, unb64cf(pkg.salt));
+        const pt  = await crypto.subtle.decrypt({name:'AES-GCM', iv:unb64cf(pkg.iv)}, key, unb64cf(pkg.ct));
+        const story = JSON.parse(new TextDecoder().decode(pt));
+        story._file = files[i];
+        out.push(story);
+      }catch(e){ failed++; }
+    }
+    if(files.length && out.length === 0){
+      listEl.innerHTML = '<p style="padding:1rem;color:var(--ox);font-style:italic">Wrong passphrase — nothing unlocked.</p>';
+      return;
+    }
+    const seen = {};
+    out.forEach(s=>{
+      const k = (s.scenario||'').toLowerCase();
+      if(!seen[k] || (s.date||'') > (seen[k].date||'')) seen[k] = s;
+    });
+    cfStories = Object.values(seen).sort((a,b)=>(a.scenario||'').localeCompare(b.scenario||''));
+    if(failed) console.warn(failed+' file(s) failed to decrypt');
+    renderCFList();
+  }
+
+  openBtn.onclick = ()=>{
+    cfStories = null; cfSelected = null;
+    filterFld.value = ''; passFld.value = '';
+    listEl.innerHTML = '<p style="padding:1rem;color:var(--faint);font-style:italic">Enter your passphrase and press Enter to load stories.</p>';
+    loadBtn.disabled = true;
+    modal.classList.add('on');
+    passFld.focus();
+  };
+
+  passFld.addEventListener('keydown', e=>{ if(e.key==='Enter') loadCFStories(); });
+  filterFld.addEventListener('input', renderCFList);
+
+  cancelBtn.onclick = ()=>{ modal.classList.remove('on'); };
+
+  loadBtn.onclick = ()=>{
+    if(!cfSelected) return;
+    const s = cfSelected;
+    if(!document.getElementById('fmScenario').value.trim())
+      document.getElementById('fmScenario').value = s.scenario || '';
+    if(!document.getElementById('fmCharacter').value.trim())
+      document.getElementById('fmCharacter').value = s.character || '';
+    if(!document.getElementById('fmSummary').value.trim())
+      document.getElementById('fmSummary').value = s.summary || '';
+    if(fmTags.get().length === 0 && s.tags && s.tags.length)
+      fmTags.setAll(s.tags);
+    modal.classList.remove('on');
+    cfMsg('Details copied from "' + (s.scenario||'story') + '".');
+  };
+})();
 
 /* ---------- misc ---------- */
 function esc(t){ const d=document.createElement('div'); d.textContent=t==null?'':t; return d.innerHTML; }
