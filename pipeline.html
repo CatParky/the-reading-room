@@ -5,11 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Pipeline — The Refuge</title>
-<script>
-  (function(){ var t = localStorage.getItem("rr_theme") ||
-    (matchMedia("(prefers-color-scheme:dark)").matches ? "dark" : "light");
-    document.documentElement.dataset.theme = t; })();
-</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Spectral:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -23,22 +18,9 @@
     --fd:"Fraunces",Georgia,serif; --fb:"Spectral",Georgia,serif;
     --fm:"IBM Plex Mono",ui-monospace,monospace;
   }
-  [data-theme="dark"]{
-    --paper:#1a1714; --raised:#221e1a; --ink:#e9e1d3; --soft:#b3a894; --faint:#7d7263;
-    --rule:#352f28; --ox:#c9756b; --oxs:#d98a80; --sage:#8b9a7f; --shadow:rgba(0,0,0,.35);
-  }
-  [data-theme="night"]{
-    --paper:#101418; --raised:#171c22; --ink:#c9d4de; --soft:#8d9aa8; --faint:#5d6975;
-    --rule:#232b34; --ox:#c98a6b; --oxs:#d99f80; --sage:#7f9a8f; --shadow:rgba(0,0,0,.45);
-  }
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--paper);color:var(--ink);font-family:var(--fb);
-    font-size:17px;line-height:1.6;min-height:100vh;padding-bottom:5rem;transition:background .4s,color .4s}
-  .nav .theme-btn{background:none;border:1px solid var(--rule);border-radius:2rem;color:var(--soft);
-    font-family:var(--fm);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;
-    padding:.3rem .8rem;cursor:pointer;transition:all .2s}
-  .nav .theme-btn:hover{border-color:var(--faint);color:var(--ink)}
-  .nav .theme-btn:focus-visible{outline:2px solid var(--ox);outline-offset:2px}
+    font-size:17px;line-height:1.6;min-height:100vh;padding-bottom:5rem}
 
   /* ---------- shared nav ---------- */
   .nav{display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap;
@@ -76,7 +58,7 @@
   /* ---------- drop zone ---------- */
   .drop{border:2px dashed var(--rule);border-radius:.8rem;background:var(--raised);
     padding:3rem 1.5rem;text-align:center;cursor:pointer;transition:all .2s}
-  .drop:hover,.drop.over {  border-color: var(--ox);background: color-mix(in srgb, var(--raised) 84%, var(--ox) 16%);}
+  .drop:hover,.drop.over{border-color:var(--ox);background:#fbf7ee}
   .drop .big{font-family:var(--fd);font-size:1.25rem;margin-bottom:.5rem}
   .drop .hint{color:var(--faint);font-size:.88rem;font-style:italic}
   .srcs{display:flex;justify-content:center;gap:.5rem;flex-wrap:wrap;margin-top:1.2rem}
@@ -183,8 +165,7 @@
   <a class="link" href="landing.html">Home</a>
   <a class="link active" href="pipeline.html">Pipeline</a>
   <a class="link" href="pipeline.html#edit" id="editNav">Edit sealed</a>
-  <a class="link" href="index.html">Library</a>
-  <button class="theme-btn" id="themeBtn">Theme</button>
+  <a class="link" href="https://catparky.github.io/the-reading-room/">Library</a>
 </nav>
 
 <div class="steps">
@@ -205,6 +186,7 @@
     <div class="srcs">
       <span class="src">MHTML page save</span>
       <span class="src">Claude export (.zip)</span>
+      <span class="src">Export manifest (.json)</span>
       <span class="src">conversations.json</span>
       <span class="src">JSON</span>
       <span class="src">Markdown</span>
@@ -226,22 +208,6 @@
     <div class="modal-foot">
       <button class="btn ghost" id="chatCancel">Cancel</button>
       <button class="btn" id="chatLoad">Open chat</button>
-    </div>
-  </div>
-</div>
-
-<!-- ============ COPY-FROM modal ============ -->
-<div class="modal" id="copyModal">
-  <div class="modal-card">
-    <div class="modal-head">
-      <h2>Copy details from…</h2>
-      <input type="password" id="copyModalPass" placeholder="passphrase" autocomplete="current-password">
-      <input type="text" id="copyModalFilter" placeholder="Filter by story name…" style="margin-top:.5rem">
-    </div>
-    <div class="modal-list" id="copyModalList"></div>
-    <div class="modal-foot">
-      <button class="btn ghost" id="copyModalCancel">Cancel</button>
-      <button class="btn" id="copyModalLoad" disabled>Copy details</button>
     </div>
   </div>
 </div>
@@ -289,34 +255,18 @@
 
   <div class="panel">
     <div class="grid2">
-      <div><label for="fmScenario">Story Name (the book — groups chapters together)</label><input type="text" id="fmScenario" placeholder="The Tell"></div>
-      <div><label for="fmCharacter">Character</label><input type="text" id="fmCharacter" placeholder="Gale"></div>
-    </div>
-    <div class="grid2" style="margin-top:.9rem">
-      <div><label for="fmPart">Part Number (optional)</label><input type="number" id="fmPart" min="1" placeholder="1"></div>
-      <div><label for="fmTitle">Chapter Title (optional)</label><input type="text" id="fmTitle" placeholder="The Meeting"></div>
-    </div>
-    <div class="grid2" style="margin-top:.9rem">
+      <div><label for="fmTitle">Title</label><input type="text" id="fmTitle"></div>
       <div><label for="fmDate">Date</label><input type="date" id="fmDate"></div>
+    </div>
+    <div class="grid2" style="margin-top:.9rem">
+      <div><label for="fmCharacter">Character</label><input type="text" id="fmCharacter"></div>
+      <div><label for="fmScenario">Scenario</label><input type="text" id="fmScenario"></div>
+    </div>
+    <div class="grid2" style="margin-top:.9rem">
+      <div><label for="fmTags">Tags (comma separated — these drive the filters)</label><input type="text" id="fmTags"></div>
       <div><label for="fmStatus">Status</label><input type="text" id="fmStatus" value="complete"></div>
     </div>
-    <div style="margin-top:.9rem">
-      <label for="fmTags">Tags (these drive the filters — always saved lowercase)</label>
-      <div id="fmTagChips" style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.5rem"></div>
-      <div style="position:relative">
-        <input type="text" id="fmTags" autocomplete="off" placeholder="click here to pick from your tags, or type a new one…">
-        <div id="fmTagDrop" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:10;background:var(--raised);border:1px solid var(--rule);border-radius:.4rem;margin-top:.25rem;max-height:14rem;overflow-y:auto;box-shadow:0 8px 24px var(--shadow)"></div>
-      </div>
-    </div>
     <div style="margin-top:.9rem"><label for="fmSummary">Summary (one line, shown on the shelf)</label><input type="text" id="fmSummary"></div>
-    <div style="margin-top:.9rem">
-      <button type="button" class="btn ghost small" id="copyFromStory">Copy details from existing story…</button>
-      <span id="copyFromMsg" style="font-family:var(--fm);font-size:.68rem;color:var(--faint);margin-left:.7rem"></span>
-    </div>
-    <details id="fmTagMgr" style="margin-top:1rem;background:var(--raised);border:1px solid var(--rule);border-radius:.5rem;padding:0 1.1rem">
-      <summary style="cursor:pointer;padding:.8rem 0;font-family:var(--fm);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--soft)">Manage your tag list</summary>
-      <div style="padding:0 0 1rem"><p style="font-size:.85rem;color:var(--soft);font-style:italic;margin-bottom:.8rem;line-height:1.6">Your autocomplete list, kept on this device. Rename or delete entries to keep future tagging tidy. This does not change tags already sealed inside stories.</p><div id="fmMgrList"></div></div>
-    </details>
     <div style="margin-top:.9rem"><label for="pass">Passphrase</label>
       <input type="password" id="pass" autocomplete="new-password">
       <p class="footer-note" style="margin-top:.3rem">Must be the same passphrase every time. It is never stored and never recoverable.</p>
@@ -371,24 +321,16 @@
   <div id="editFormPanel" hidden>
     <div class="panel">
       <div class="grid2">
-        <div><label for="eScenario">Story Name</label><input type="text" id="eScenario" placeholder="The Tell"></div>
-        <div><label for="eCharacter">Character</label><input type="text" id="eCharacter" placeholder="Gale"></div>
-      </div>
-      <div class="grid2" style="margin-top:.9rem">
-        <div><label for="ePart">Part Number (optional)</label><input type="number" id="ePart" min="1" placeholder="1"></div>
-        <div><label for="eTitle">Chapter Title (optional)</label><input type="text" id="eTitle" placeholder="The Meeting"></div>
-      </div>
-      <div class="grid2" style="margin-top:.9rem">
+        <div><label for="eTitle">Title</label><input type="text" id="eTitle"></div>
         <div><label for="eDate">Date</label><input type="date" id="eDate"></div>
-        <div><label for="eStatus">Status</label><input type="text" id="eStatus"></div>
       </div>
-      <div style="margin-top:.9rem">
-        <label for="eTags">Tags (always saved lowercase)</label>
-        <div id="eTagChips" style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.5rem"></div>
-        <div style="position:relative">
-          <input type="text" id="eTags" autocomplete="off" placeholder="click to pick from your tags, or type a new one…">
-          <div id="eTagDrop" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:10;background:var(--raised);border:1px solid var(--rule);border-radius:.4rem;margin-top:.25rem;max-height:14rem;overflow-y:auto;box-shadow:0 8px 24px var(--shadow)"></div>
-        </div>
+      <div class="grid2" style="margin-top:.9rem">
+        <div><label for="eCharacter">Character</label><input type="text" id="eCharacter"></div>
+        <div><label for="eScenario">Scenario</label><input type="text" id="eScenario"></div>
+      </div>
+      <div class="grid2" style="margin-top:.9rem">
+        <div><label for="eTags">Tags (comma separated)</label><input type="text" id="eTags"></div>
+        <div><label for="eStatus">Status</label><input type="text" id="eStatus"></div>
       </div>
       <div style="margin-top:.9rem"><label for="eSummary">Summary</label><input type="text" id="eSummary"></div>
       <div style="margin-top:.9rem"><label for="eBody">Story text (markdown)</label>
@@ -398,11 +340,9 @@
     <div class="panel">
       <div class="exports" style="margin-top:0">
         <button class="btn" id="editReseal">Re-seal &amp; download</button>
-        <button class="btn ghost" id="editExpMd">Markdown copy</button>
-        <button class="btn ghost" id="editExpTxt">Text copy</button>
         <button class="btn ghost" id="editCancel">Discard &amp; start over</button>
       </div>
-      <p class="footer-note" style="margin-top:.6rem">Re-sealed with the same passphrase you unsealed with. Markdown/Text copies are plain, unencrypted backups for your own records.</p>
+      <p class="footer-note" style="margin-top:.6rem">Re-sealed with the same passphrase you unsealed with.</p>
       <p class="msgline" id="editSaveMsg"></p>
     </div>
 
@@ -429,202 +369,16 @@ let bulkChats = null;      // Claude export chat array (kept so more chats can b
 let selectedChat = null;
 const $ = s => document.querySelector(s);
 
-/* ===== theme toggle (shares rr_theme across the Refuge) ===== */
-(function(){
-  var THEMES=["light","dark","night"];
-  var b=document.getElementById("themeBtn");
-  if(b) b.onclick=function(){var c=document.documentElement.dataset.theme||"light";
-    var n=THEMES[(THEMES.indexOf(c)+1)%THEMES.length];
-    document.documentElement.dataset.theme=n; localStorage.setItem("rr_theme",n);};
-})();
-
-/* ===== shared tag picker (repo-backed central list, localStorage cache, autocomplete) ===== */
-const TAGLIB_KEY   = "rr_tag_library";
-const TAGTOKEN_KEY = "rr_gh_token";
-const TAGS_URL = "https://catparky.github.io/the-reading-room/tags.txt";
-const TAGS_API = "https://api.github.com/repos/CatParky/the-reading-room/contents/tags.txt";
-
-function loadTagLib(){ try{ return JSON.parse(localStorage.getItem(TAGLIB_KEY))||[]; }catch(e){ return []; } }
-function saveTagLib(list){ localStorage.setItem(TAGLIB_KEY, JSON.stringify([...new Set(list.map(t=>t.trim().toLowerCase()).filter(Boolean))].sort())); }
-
-async function syncTagsFromRepo(quiet){
-  try{
-    const r=await fetch(TAGS_URL+"?t="+Date.now());
-    if(!r.ok) throw new Error("fetch failed");
-    const txt=await r.text();
-    const remote=txt.split("\n").map(t=>t.trim().toLowerCase()).filter(Boolean);
-    const merged=[...new Set([...loadTagLib(),...remote])].sort();
-    saveTagLib(merged);
-    if(!quiet) tagSyncMsg("Tags refreshed — "+merged.length+" in list.","ok");
-    return merged;
-  }catch(e){
-    if(!quiet) tagSyncMsg("Couldn't reach tags.txt — are you online?","err");
-    return loadTagLib();
-  }
-}
-
-async function pushTagsToRepo(list){
-  const token=localStorage.getItem(TAGTOKEN_KEY);
-  if(!token){ tagSyncMsg("Paste your GitHub token below first.","err"); return false; }
-  try{
-    const meta=await fetch(TAGS_API,{headers:{"Authorization":"token "+token,"Accept":"application/vnd.github.v3+json"}});
-    const mj=await meta.json(); if(!meta.ok) throw new Error(mj.message||"API error");
-    const content=btoa(list.join("\n")+"\n");
-    const put=await fetch(TAGS_API,{method:"PUT",
-      headers:{"Authorization":"token "+token,"Accept":"application/vnd.github.v3+json","Content-Type":"application/json"},
-      body:JSON.stringify({message:"Update tag list",content,sha:mj.sha})});
-    const pj=await put.json(); if(!put.ok) throw new Error(pj.message||"write failed");
-    tagSyncMsg("tags.txt saved to repo ✓","ok"); return true;
-  }catch(e){ tagSyncMsg("Couldn't write to repo: "+e.message,"err"); return false; }
-}
-
-function tagSyncMsg(msg,type){
-  const el=document.getElementById("tagSyncMsg"); if(!el) return;
-  el.textContent=msg; el.style.color=type==="ok"?"var(--sage)":"var(--ox)";
-  setTimeout(()=>{ if(el.textContent===msg) el.textContent=""; },5000);
-}
-
-(function(){ saveTagLib(loadTagLib()); })(); /* normalise on load */
-syncTagsFromRepo(true);                       /* quiet background fetch */
-
-function makeTagPicker(chipsId, inputId, dropId){
-  const chosen=[];
-  let dropIdx=-1;
-  const chipsEl=()=>document.getElementById(chipsId);
-  const inputEl=()=>document.getElementById(inputId);
-  const dropEl =()=>document.getElementById(dropId);
-  function renderChips(){
-    const box=chipsEl(); if(!box) return; box.innerHTML="";
-    chosen.forEach(t=>{
-      const b=document.createElement("button"); b.type="button";
-      b.style.cssText="background:var(--ox);color:var(--paper);border:none;border-radius:2rem;padding:.28rem .7rem .28rem .8rem;font-family:var(--fm);font-size:.72rem;cursor:pointer";
-      b.innerHTML=t+" &times;"; b.title="Remove"; b.onclick=()=>remove(t);
-      chipsEl().appendChild(b);
-    });
-  }
-  function add(raw){ const t=String(raw).trim().toLowerCase(); if(!t||chosen.includes(t)) return;
-    chosen.push(t); const lib=loadTagLib(); if(!lib.includes(t)){ lib.push(t); saveTagLib(lib); } renderChips(); }
-  function remove(t){ const i=chosen.indexOf(t); if(i>=0) chosen.splice(i,1); renderChips(); }
-  function setAll(list){ chosen.length=0; (list||[]).forEach(t=>{ const v=String(t).trim().toLowerCase(); if(v&&!chosen.includes(v)) chosen.push(v); }); renderChips(); }
-  function showDrop(){
-    const q=(inputEl().value||"").trim().toLowerCase();
-    const lib=loadTagLib().filter(t=>!chosen.includes(t));
-    const matches=q?lib.filter(t=>t.includes(q)):lib;
-    const drop=dropEl(); dropIdx=-1; let html="";
-    matches.forEach((t,i)=>{ html+=`<div class="tagopt" data-tag="${t}" data-i="${i}" style="padding:.5rem .8rem;cursor:pointer;font-family:var(--fb);font-size:.9rem;color:var(--ink)">${t}</div>`; });
-    if(q&&!lib.includes(q)&&!chosen.includes(q))
-      html+=`<div class="tagopt" data-tag="${q}" data-i="${matches.length}" style="padding:.5rem .8rem;cursor:pointer;font-family:var(--fb);font-size:.9rem;color:var(--ox);border-top:1px solid var(--rule)">+ add new tag "${q}"</div>`;
-    if(!html){ drop.style.display="none"; return; }
-    drop.innerHTML=html; drop.style.display="block";
-    drop.querySelectorAll(".tagopt").forEach(opt=>{
-      opt.onmousedown=e=>{ e.preventDefault(); add(opt.dataset.tag); inputEl().value=""; showDrop(); inputEl().focus(); };
-      opt.onmouseenter=()=>hi(+opt.dataset.i);
-    });
-  }
-  function hi(i){ const opts=dropEl().querySelectorAll(".tagopt"); dropIdx=i;
-    opts.forEach((o,j)=>o.style.background=j===i?"var(--paper)":"transparent"); }
-  const inp=inputEl();
-  if(inp){
-    inp.addEventListener("focus",showDrop);
-    inp.addEventListener("input",showDrop);
-    inp.addEventListener("keydown",e=>{
-      const opts=dropEl().querySelectorAll(".tagopt");
-      if(e.key==="ArrowDown"){ e.preventDefault(); hi(Math.min(dropIdx+1,opts.length-1)); }
-      else if(e.key==="ArrowUp"){ e.preventDefault(); hi(Math.max(dropIdx-1,0)); }
-      else if(e.key==="Enter"){ e.preventDefault();
-        if(dropIdx>=0&&opts[dropIdx]){ add(opts[dropIdx].dataset.tag); }
-        else { const v=inp.value.trim(); if(v) v.split(",").forEach(add); }
-        inp.value=""; showDrop(); }
-      else if(e.key==="Escape"){ dropEl().style.display="none"; }
-    });
-    inp.addEventListener("blur",()=>{ setTimeout(()=>{ if(dropEl()) dropEl().style.display="none"; },150); });
-  }
-  renderChips();
-  return { get:()=>chosen.slice(), add, setAll, flushPending:()=>{ const v=inputEl().value.trim(); if(v){ v.split(",").forEach(add); inputEl().value=""; } } };
-}
-
-function wireTagManager(detailsId, listId){
-  const d=document.getElementById(detailsId); if(!d) return;
-  function render(){
-    const box=document.getElementById(listId); if(!box) return;
-    const lib=loadTagLib();
-    box.innerHTML=`
-      <p style="font-size:.82rem;color:var(--soft);font-style:italic;margin-bottom:.8rem;line-height:1.6">
-        Tags are stored in <code>tags.txt</code> in the repo and load automatically each visit.
-        Add a new tag here and it saves back to the file. A one-time GitHub token is needed for saving —
-        or edit <code>tags.txt</code> directly in the GitHub web editor.</p>
-      <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:.7rem">
-        <input id="tagSyncNewTag" placeholder="new tag to add…" autocomplete="off"
-          style="flex:1;min-width:9rem;font-size:.9rem;padding:.4rem .6rem">
-        <button type="button" id="tagSyncAdd"
-          style="background:var(--ox);color:var(--paper);border:none;border-radius:.35rem;padding:.4rem .8rem;font-family:var(--fm);font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;white-space:nowrap">
-          Add &amp; save to repo</button>
-        <button type="button" id="tagSyncRefresh"
-          style="background:none;border:1px solid var(--rule);border-radius:.35rem;padding:.4rem .8rem;font-family:var(--fm);font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;color:var(--soft);cursor:pointer;white-space:nowrap">
-          ↻ Refresh from repo</button>
-      </div>
-      <details style="margin-bottom:.8rem">
-        <summary style="font-family:var(--fm);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);cursor:pointer;padding:.3rem 0">GitHub token (one-time setup for saving)</summary>
-        <div style="margin-top:.5rem">
-        <p style="font-size:.8rem;color:var(--soft);margin-bottom:.5rem;line-height:1.6">
-          <strong>github.com → Settings → Developer settings → Personal access tokens → Fine-grained</strong><br>
-          Repository access: <em>the-reading-room only</em> · Permission: <em>Contents: Read and write</em>.<br>
-          Paste below — stored only in this browser, never sent anywhere except GitHub directly.</p>
-        <div style="display:flex;gap:.5rem">
-          <input type="password" id="tagTokenInput" placeholder="github_pat_…"
-            style="flex:1;font-size:.85rem;padding:.4rem .6rem;font-family:monospace">
-          <button type="button" id="tagTokenSave"
-            style="background:none;border:1px solid var(--rule);border-radius:.35rem;padding:.4rem .7rem;font-family:var(--fm);font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;color:var(--soft);cursor:pointer">Save</button>
-        </div></div>
-      </details>
-      <p id="tagSyncMsg" style="font-size:.82rem;min-height:1.2em;margin-bottom:.6rem"></p>
-      <div style="font-family:var(--fm);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:.5rem">Current list (${lib.length} tags)</div>
-      <div id="${listId}Chips" style="display:flex;flex-wrap:wrap;gap:.35rem"></div>`;
-
-    const chips=document.getElementById(listId+"Chips");
-    lib.forEach(t=>{
-      const sp=document.createElement("span");
-      sp.style.cssText="background:var(--paper);border:1px solid var(--rule);border-radius:2rem;padding:.2rem .65rem;font-family:var(--fb);font-size:.82rem;color:var(--soft)";
-      sp.textContent=t; chips.appendChild(sp);
-    });
-
-    if(localStorage.getItem(TAGTOKEN_KEY))
-      document.getElementById("tagTokenInput").placeholder="(token saved — paste new one to replace)";
-
-    document.getElementById("tagTokenSave").onclick=()=>{
-      const v=(document.getElementById("tagTokenInput").value||"").trim();
-      if(v){ localStorage.setItem(TAGTOKEN_KEY,v); tagSyncMsg("Token saved to this browser.","ok");
-        document.getElementById("tagTokenInput").value=""; }
-    };
-    document.getElementById("tagSyncRefresh").onclick=async()=>{
-      const btn=document.getElementById("tagSyncRefresh"); btn.textContent="…";
-      await syncTagsFromRepo(false); render(); };
-    document.getElementById("tagSyncAdd").onclick=async()=>{
-      const v=(document.getElementById("tagSyncNewTag").value||"").trim().toLowerCase();
-      if(!v){ tagSyncMsg("Type a tag first.","err"); return; }
-      const lib2=loadTagLib();
-      if(lib2.includes(v)){ tagSyncMsg(`"${v}" is already in the list.`,"err"); return; }
-      lib2.push(v); saveTagLib(lib2);
-      await pushTagsToRepo(lib2); render();
-    };
-  }
-  d.addEventListener("toggle",()=>{ if(d.open) render(); });
-}
-
 function freshState(title, created, turns){
   state = {
     title: title || 'Untitled',
     created: created || Math.floor(Date.now()/1000),
-    turns: turns.map(t => {
-      const prompt = t.user_prompt || t.userprompt || '';
-      const responses = (t.model_responses || t.modelresponses || []).slice();
-      return {
-        user_prompt: prompt,
-        model_responses: responses,
-        chosen: Math.max(0, responses.length - 1),
-        included: true
-      };
-    })
+    turns: turns.map(t => ({
+      user_prompt: t.user_prompt || '',
+      model_responses: (t.model_responses || []).slice(),
+      chosen: Math.max(0, (t.model_responses || []).length - 1),
+      included: true
+    }))
   };
 }
 
@@ -693,14 +447,35 @@ async function route(file){
 async function routeZip(file){
   say('Opening archive…');
   const zip = await JSZip.loadAsync(file);
+  // Look for conversations.json first (old format)
   let entry = null;
   zip.forEach((path, f)=>{ if(!entry && /(^|\/)conversations\.json$/i.test(path)) entry = f; });
-  if(!entry) throw new Error('No conversations.json found inside this archive.');
+  // Fallback: any .json file in the archive
+  if(!entry){
+    const jsonFiles = [];
+    zip.forEach((path, f)=>{ if(/\.json$/i.test(path) && !f.dir) jsonFiles.push(f); });
+    if(jsonFiles.length === 1) entry = jsonFiles[0];
+    else if(jsonFiles.length > 1){
+      // Prefer the largest JSON file (likely the conversations data)
+      let biggest = null, biggestSize = 0;
+      for(const jf of jsonFiles){
+        const size = jf._data ? (jf._data.uncompressedSize || 0) : 0;
+        if(size > biggestSize){ biggest = jf; biggestSize = size; }
+      }
+      entry = biggest || jsonFiles[0];
+    }
+  }
+  if(!entry) throw new Error('No JSON data found inside this archive.');
   const data = JSON.parse(await entry.async('string'));
-  routeJSON(data, 'conversations.json');
+  routeJSON(data, entry.name || 'conversations.json');
 }
 
 function routeJSON(data, filename){
+  // Anthropic export manifest (new format, Sept 2025+)
+  if(data.data_files && Array.isArray(data.data_files) && data.instructions){
+    showManifest(data);
+    return;
+  }
   // Claude export: array of chats with chat_messages
   if(Array.isArray(data) && data.length && data[0].chat_messages){
     bulkChats = data;
@@ -708,45 +483,18 @@ function routeJSON(data, filename){
     say('');
     return;
   }
-// Pipeline and previous-source exports with a turns array.
-// Supports both one `modelresponse` and several `modelresponses`.
-// Also supports underscore variants (user_prompt, model_responses) from
-// third-party exporters such as Nessie Labs.
-// The full response array is retained so Check can offer a version chooser.
-if (Array.isArray(data.turns)) {
-  const conv = data.conversation || data.metadata || {};
-
-  const turns = data.turns.map(t => {
-    const rawResponses = Array.isArray(t.model_responses)
-      ? t.model_responses
-      : Array.isArray(t.modelresponses)
-        ? t.modelresponses
-        : (t.model_response != null)
-          ? [t.model_response]
-          : (t.modelresponse != null)
-            ? [t.modelresponse]
-            : [];
-
-    return {
-      userprompt: String(t.user_prompt || t.userprompt || "").trim(),
-      modelresponses: rawResponses
-        .map(response => String(response || "").trim())
-        .filter(Boolean)
-    };
-  }).filter(t => t.userprompt || t.modelresponses.length);
-
-  if (!turns.length) {
-    throw new Error("This JSON has turns, but none contained readable text.");
+  // Own pipeline / converter format: {conversation, turns}
+  if(data.turns && Array.isArray(data.turns)){
+    const conv = data.conversation || data.metadata || {};
+    startCheck(conv.title, conv.creation_timestamp, data.turns, false);
+    return;
   }
-
-  startCheck(
-    conv.title || filename.replace(/\.json$/i, ""),
-    conv.creationtimestamp || null,
-    turns,
-    false
-  );
-  return;
-}
+  // Previously extracted format: {metadata, turns:[{turn_number, user_prompt, model_response}]}
+  if(data.metadata && Array.isArray(data.turns) && data.turns.length && 'model_response' in data.turns[0]){
+    const turns = data.turns.map(t=>({user_prompt:t.user_prompt||'', model_responses:t.model_response?[t.model_response]:[]}));
+    startCheck(data.metadata.title, data.metadata.creation_timestamp, turns, false);
+    return;
+  }
   // Exporter format: {metadata, messages:[{role, say}]}
   if(data.messages && Array.isArray(data.messages)){
     const turns = [];
@@ -760,6 +508,47 @@ if (Array.isArray(data.turns)) {
     return;
   }
   throw new Error('Unrecognised JSON structure.');
+}
+
+function showManifest(manifest){
+  const convFile = manifest.data_files.find(f => f.category === 'conversations');
+  const projFile = manifest.data_files.find(f => f.category === 'projects');
+  const created = manifest.created_at ? new Date(manifest.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : 'unknown date';
+
+  let html = `<div class="panel" style="margin-top:1.2rem">
+    <p style="margin-bottom:.8rem">This is an <b style="color:var(--ox)">Anthropic export manifest</b> from ${created}
+    — it contains download links, not the conversations themselves.</p>
+    <p style="margin-bottom:1rem">Download the file${projFile ? 's' : ''} below in your browser, then drop the zip${projFile ? '(s)' : ''} back here.</p>
+    <div style="display:flex;flex-direction:column;gap:.6rem">`;
+
+  for(const f of manifest.data_files){
+    const icon = f.category === 'conversations' ? '💬' :
+                 f.category === 'projects' ? '📂' :
+                 f.category === 'memories' ? '🧠' : '📋';
+    const useful = (f.category === 'conversations' || f.category === 'projects');
+    html += `<div style="display:flex;align-items:center;gap:.8rem;padding:.6rem .8rem;
+      background:var(--paper);border:1px solid var(--rule);border-radius:.5rem;
+      ${useful ? '' : 'opacity:.5'}">
+      <span style="font-size:1.2rem">${icon}</span>
+      <div style="flex:1">
+        <div style="font-family:var(--fm);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:${useful ? 'var(--ox)' : 'var(--faint)'}">${f.category}</div>
+        <div style="font-size:.82rem;color:var(--soft)">${f.filename}</div>
+      </div>
+      <a href="${f.export_url}" target="_blank" class="btn small${useful ? '' : ' ghost'}" 
+        style="text-decoration:none">Download</a>
+    </div>`;
+  }
+
+  html += `</div>
+    <p style="margin-top:1rem;font-size:.82rem;color:var(--faint);font-style:italic">
+      ⚠ Each download link can only be used once. The <b>conversations</b>${projFile ? ' and <b>projects</b>' : ''} zip${projFile ? 's contain' : ' contains'} your chats.</p>
+  </div>`;
+
+  // Show in stage 1 area
+  const container = document.createElement('div');
+  container.innerHTML = html;
+  stage1.querySelector('.drop').insertAdjacentElement('afterend', container);
+  say('Export manifest detected — download the conversations zip, then drop it here.');
 }
 
 function routeText(content, filename){
@@ -1096,11 +885,8 @@ $('#jumpTo').addEventListener('keypress', e=>{
   }
 });
 $('#toArchive').onclick = ()=>{
-  // carry details forward — the chat's name becomes the Story Name by default
-  if(!$('#fmScenario').value.trim()){
-    // tidy a leading "RP - " / "RP " prefix if present
-    $('#fmScenario').value = (state.title||'').replace(/^\s*RP\s*[-–—:]?\s*/i,'').trim();
-  }
+  // carry details forward
+  $('#fmTitle').value = state.title;
   $('#fmCharacter').value = $('#charName').value.trim();
   let d = new Date().toISOString().slice(0,10);
   if(state.created) d = new Date(state.created*1000).toISOString().slice(0,10);
@@ -1218,24 +1004,16 @@ function exportTurns(){
   return state.turns.filter((t,i)=>turnIncluded(i));
 }
 
-/* instantiate the Archive tag picker + manager */
-const fmTags = makeTagPicker("fmTagChips","fmTags","fmTagDrop");
-wireTagManager("fmTagMgr","fmMgrList");
-
 function frontmatter(){
-  const parts=[
-    `---`,
-    `story: ${$('#fmScenario').value.trim()}`,
-    $('#fmTitle').value.trim() ? `chapter: ${$('#fmTitle').value.trim()}` : null,
-    $('#fmPart').value.trim() ? `part: ${$('#fmPart').value.trim()}` : null,
-    `character: ${$('#fmCharacter').value.trim()}`,
-    `tags: [${fmTags.get().join(', ')}]`,
-    `status: ${$('#fmStatus').value.trim()||'complete'}`,
-    `date: ${$('#fmDate').value||new Date().toISOString().slice(0,10)}`,
-    `summary: ${$('#fmSummary').value.trim()}`,
-    `---`, ``
-  ].filter(x=>x!==null);
-  return parts.join('\n')+'\n';
+  return `---\n`+
+    `title: ${$('#fmTitle').value.trim()}\n`+
+    `character: ${$('#fmCharacter').value.trim()}\n`+
+    `scenario: ${$('#fmScenario').value.trim()}\n`+
+    `tags: ${$('#fmTags').value.trim()}\n`+
+    `status: ${$('#fmStatus').value.trim()||'complete'}\n`+
+    `date: ${$('#fmDate').value||new Date().toISOString().slice(0,10)}\n`+
+    `summary: ${$('#fmSummary').value.trim()}\n`+
+    `---\n\n`;
 }
 
 function storyBody(sep){
@@ -1253,7 +1031,7 @@ function storyBody(sep){
 }
 
 function fileBasics(){
-  const title = $('#fmScenario').value.trim() || $('#fmTitle').value.trim() || state.title || 'story';
+  const title = $('#fmTitle').value.trim() || state.title || 'story';
   const dateStr = $('#fmDate').value || new Date().toISOString().slice(0,10);
   return {title, dateStr};
 }
@@ -1272,10 +1050,9 @@ $('#expTxt').onclick = ()=>{ const {title,dateStr}=fileBasics();
   download(frontmatter()+storyBody('* * *'), `${dateStr} - ${title}.txt`, 'text/plain');
   note('Text copy downloaded.','ok'); };
 $('#expJson').onclick = ()=>{ const {title}=fileBasics();
-  const data={ metadata:{ story:$('#fmScenario').value.trim(), chapter:$('#fmTitle').value.trim(),
-      part:$('#fmPart').value.trim(), creation_timestamp:state.created,
-      character:$('#fmCharacter').value.trim(),
-      tags:fmTags.get(),
+  const data={ metadata:{ title, creation_timestamp:state.created,
+      character:$('#fmCharacter').value.trim(), scenario:$('#fmScenario').value.trim(),
+      tags:$('#fmTags').value.split(',').map(s=>s.trim()).filter(Boolean),
       status:$('#fmStatus').value.trim()||'complete', summary:$('#fmSummary').value.trim() },
     turns: exportTurns().map((t,i)=>({ turn_number:i+1, user_prompt:t.user_prompt,
       model_response:t.model_responses[t.chosen]||null })) };
@@ -1305,18 +1082,17 @@ $('#sealBtn').onclick = async ()=>{
     if(!window.crypto || !crypto.subtle){
       note("This browser context can't encrypt. Open the pipeline at its https:// address rather than from a local file.", 'err'); return; }
     const pass = $('#pass').value;
-    if(!$('#fmScenario').value.trim()){ note('Fill in at least the Story Name.','err'); return; }
+    const {title} = fileBasics();
+    if(!title && !$('#fmScenario').value.trim()){ note('Fill in at least a Title or Scenario.','err'); return; }
     if(pass.length<8){ note('Passphrase needs to be at least 8 characters.','err'); return; }
-    fmTags.flushPending();
     const body = storyBody('* * *').trim();
     if(!body){ note('There is nothing to seal — every turn is excluded.','err'); return; }
 
     const story = {
       title: $('#fmTitle').value.trim(),
-      part: $('#fmPart').value.trim(),
       character: $('#fmCharacter').value.trim(),
       scenario: $('#fmScenario').value.trim(),
-      tags: fmTags.get(),
+      tags: $('#fmTags').value.split(',').map(s=>s.trim()).filter(Boolean),
       status: $('#fmStatus').value.trim() || 'complete',
       date: $('#fmDate').value || new Date().toISOString().slice(0,10),
       summary: $('#fmSummary').value.trim(),
@@ -1330,7 +1106,7 @@ $('#sealBtn').onclick = async ()=>{
     const pkg = {v:1, salt:b64(salt), iv:b64(iv), ct:b64(ct)};
 
     const digest = await crypto.subtle.digest('SHA-256',
-      new TextEncoder().encode(story.scenario + '|' + story.part + '|' + story.title + '|' + story.date));
+      new TextEncoder().encode(story.title + story.date));
     const short = [...new Uint8Array(digest)].slice(0,3)
       .map(x=>x.toString(16).padStart(2,'0')).join('');
     const fname = `story-${short}.json`;
@@ -1390,34 +1166,6 @@ async function deriveKeyRW(pass, salt){
     raw, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
 }
 
-/* Edit-stage tag picker + a plain-text/markdown builder for offline backups */
-const eTags = makeTagPicker("eTagChips","eTags","eTagDrop");
-function editStoryMarkdown(){
-  const fm=[
-    `---`,
-    `story: ${$('#eScenario').value.trim()}`,
-    $('#eTitle').value.trim() ? `chapter: ${$('#eTitle').value.trim()}` : null,
-    $('#ePart').value.trim() ? `part: ${$('#ePart').value.trim()}` : null,
-    `character: ${$('#eCharacter').value.trim()}`,
-    `tags: [${eTags.get().join(', ')}]`,
-    `status: ${$('#eStatus').value.trim()||'complete'}`,
-    `date: ${$('#eDate').value||new Date().toISOString().slice(0,10)}`,
-    `summary: ${$('#eSummary').value.trim()}`,
-    `---`, ``
-  ].filter(x=>x!==null).join('\n');
-  return fm+'\n'+($('#eBody').value||'');
-}
-function editFilename(ext){
-  const base=($('#eScenario').value.trim()||$('#eTitle').value.trim()||'story')
-    .toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-  const p=$('#ePart').value.trim()?('-part'+$('#ePart').value.trim()):'';
-  return base+p+'.'+ext;
-}
-$('#editExpMd').onclick = ()=>{ download(editStoryMarkdown(), editFilename('md'), 'text/markdown');
-  editMsg('Markdown backup downloaded.','ok',$('#editSaveMsg')); };
-$('#editExpTxt').onclick = ()=>{ download(editStoryMarkdown(), editFilename('txt'), 'text/plain');
-  editMsg('Text backup downloaded.','ok',$('#editSaveMsg')); };
-
 $('#editUnseal').onclick = async ()=>{
   const msg = $('#editOpenMsg');
   editMsg('','',msg);
@@ -1440,11 +1188,10 @@ $('#editUnseal').onclick = async ()=>{
     }
     const story = JSON.parse(new TextDecoder().decode(pt));
     $('#eTitle').value = story.title || '';
-    $('#ePart').value = story.part || '';
     $('#eDate').value = story.date || '';
     $('#eCharacter').value = story.character || '';
     $('#eScenario').value = story.scenario || '';
-    eTags.setAll(Array.isArray(story.tags) ? story.tags : (story.tags ? String(story.tags).split(',') : []));
+    $('#eTags').value = Array.isArray(story.tags) ? story.tags.join(', ') : (story.tags || '');
     $('#eStatus').value = story.status || 'complete';
     $('#eSummary').value = story.summary || '';
     $('#eBody').value = story.body || '';
@@ -1465,9 +1212,8 @@ $('#editCancel').onclick = ()=>{
   $('#editPickedName').textContent = '';
   $('#editUnseal').disabled = true;
   $('#editPass').value = '';
-  ['eTitle','ePart','eDate','eCharacter','eScenario','eStatus','eSummary','eBody']
+  ['eTitle','eDate','eCharacter','eScenario','eTags','eStatus','eSummary','eBody']
     .forEach(id=>{ $('#'+id).value = id==='eStatus' ? 'complete' : ''; });
-  eTags.setAll([]);
   $('#editOpenPanel').hidden = false;
   $('#editFormPanel').hidden = true;
   editMsg('','',$('#editOpenMsg'));
@@ -1479,16 +1225,14 @@ $('#editReseal').onclick = async ()=>{
   try{
     const pass = editPassphrase;
     if(!pass){ editMsg('Open a sealed file first.','err',msg); return; }
-    if(!$('#eScenario').value.trim()){
-      editMsg('Fill in at least the Story Name.','err',msg); return;
+    if(!$('#eTitle').value.trim() && !$('#eScenario').value.trim()){
+      editMsg('Fill in at least a Title or Scenario.','err',msg); return;
     }
-    eTags.flushPending();
     const story = {
       title: $('#eTitle').value.trim(),
-      part: $('#ePart').value.trim(),
       character: $('#eCharacter').value.trim(),
       scenario: $('#eScenario').value.trim(),
-      tags: eTags.get(),
+      tags: $('#eTags').value.split(',').map(s=>s.trim()).filter(Boolean),
       status: $('#eStatus').value.trim() || 'complete',
       date: $('#eDate').value || new Date().toISOString().slice(0,10),
       summary: $('#eSummary').value.trim(),
@@ -1502,7 +1246,7 @@ $('#editReseal').onclick = async ()=>{
     const pkg  = {v:1, salt:b64(salt), iv:b64(iv), ct:b64(ct)};
 
     const digest = await crypto.subtle.digest('SHA-256',
-      new TextEncoder().encode(story.scenario + '|' + story.part + '|' + story.title + '|' + story.date));
+      new TextEncoder().encode(story.title + story.date));
     const short = [...new Uint8Array(digest)].slice(0,3)
       .map(x=>x.toString(16).padStart(2,'0')).join('');
     const fname = `story-${short}.json`;
@@ -1521,126 +1265,6 @@ $('#editReseal').onclick = async ()=>{
 
 /* ---------- misc ---------- */
 function esc(t){ const d=document.createElement('div'); d.textContent=t==null?'':t; return d.innerHTML; }
-
-/* =====================================================================
-   COPY-FROM-STORY (Archive stage QOL)
-   ===================================================================== */
-(function(){
-  const ITER_CF = 310000;
-  let cfStories = null, cfSelected = null;
-
-  const unb64cf = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
-  async function deriveKeyCF(pass, salt){
-    const raw = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass),
-      'PBKDF2', false, ['deriveKey']);
-    return crypto.subtle.deriveKey({name:'PBKDF2', salt, iterations:ITER_CF, hash:'SHA-256'},
-      raw, {name:'AES-GCM', length:256}, false, ['decrypt']);
-  }
-
-  const modal      = document.getElementById('copyModal');
-  const passFld    = document.getElementById('copyModalPass');
-  const filterFld  = document.getElementById('copyModalFilter');
-  const listEl     = document.getElementById('copyModalList');
-  const loadBtn    = document.getElementById('copyModalLoad');
-  const cancelBtn  = document.getElementById('copyModalCancel');
-  const openBtn    = document.getElementById('copyFromStory');
-  const msgEl      = document.getElementById('copyFromMsg');
-
-  function cfMsg(t){ msgEl.textContent = t; setTimeout(()=>{ if(msgEl.textContent===t) msgEl.textContent=''; }, 3000); }
-
-  function renderCFList(){
-    const q = (filterFld.value||'').trim().toLowerCase();
-    listEl.innerHTML = '';
-    cfSelected = null; loadBtn.disabled = true;
-    if(!cfStories || !cfStories.length){
-      listEl.innerHTML = '<p style="padding:1rem;color:var(--faint);font-style:italic">No stories loaded yet.</p>';
-      return;
-    }
-    const shown = q ? cfStories.filter(s=>(s.scenario||'').toLowerCase().includes(q)) : cfStories;
-    if(!shown.length){
-      listEl.innerHTML = '<p style="padding:1rem;color:var(--faint);font-style:italic">Nothing matches.</p>';
-      return;
-    }
-    shown.forEach(s=>{
-      const div = document.createElement('div');
-      div.className = 'chat-item';
-      div.innerHTML = `<div class="chat-name">${esc(s.scenario||'Untitled')}</div>
-        <div class="chat-meta">${esc(s.character||'')}${s.tags&&s.tags.length?' · '+s.tags.join(', '):''}</div>`;
-      div.onclick = ()=>{
-        cfSelected = s;
-        listEl.querySelectorAll('.chat-item').forEach(el=>el.classList.remove('sel'));
-        div.classList.add('sel');
-        loadBtn.disabled = false;
-      };
-      listEl.appendChild(div);
-    });
-  }
-
-  async function loadCFStories(){
-    listEl.innerHTML = '<p style="padding:1rem;color:var(--faint);font-style:italic">Fetching…</p>';
-    loadBtn.disabled = true;
-    const pass = passFld.value;
-    if(!pass){ listEl.innerHTML = '<p style="padding:1rem;color:var(--ox);font-style:italic">Enter your passphrase above first.</p>'; return; }
-    let manifest;
-    try{ manifest = await (await fetch('./manifest.json', {cache:'no-store'})).json(); }
-    catch(e){ listEl.innerHTML = '<p style="padding:1rem;color:var(--ox);font-style:italic">Could not load manifest.json.</p>'; return; }
-    const files = manifest.stories || [];
-    const out = []; let failed = 0;
-    for(let i=0; i<files.length; i++){
-      listEl.innerHTML = `<p style="padding:1rem;color:var(--faint);font-style:italic">Unlocking ${i+1} of ${files.length}…</p>`;
-      try{
-        const pkg = await (await fetch(`./stories/${files[i]}`, {cache:'no-store'})).json();
-        const key = await deriveKeyCF(pass, unb64cf(pkg.salt));
-        const pt  = await crypto.subtle.decrypt({name:'AES-GCM', iv:unb64cf(pkg.iv)}, key, unb64cf(pkg.ct));
-        const story = JSON.parse(new TextDecoder().decode(pt));
-        story._file = files[i];
-        out.push(story);
-      }catch(e){ failed++; }
-    }
-    if(files.length && out.length === 0){
-      listEl.innerHTML = '<p style="padding:1rem;color:var(--ox);font-style:italic">Wrong passphrase — nothing unlocked.</p>';
-      return;
-    }
-    // Deduplicate by scenario name, keep most recent
-    const seen = {};
-    out.forEach(s=>{
-      const k = (s.scenario||'').toLowerCase();
-      if(!seen[k] || (s.date||'') > (seen[k].date||'')) seen[k] = s;
-    });
-    cfStories = Object.values(seen).sort((a,b)=>(a.scenario||'').localeCompare(b.scenario||''));
-    if(failed) console.warn(failed+' file(s) failed to decrypt');
-    renderCFList();
-  }
-
-  openBtn.onclick = ()=>{
-    cfStories = null; cfSelected = null;
-    filterFld.value = ''; passFld.value = '';
-    listEl.innerHTML = '<p style="padding:1rem;color:var(--faint);font-style:italic">Enter your passphrase and press Enter to load stories.</p>';
-    loadBtn.disabled = true;
-    modal.classList.add('on');
-    passFld.focus();
-  };
-
-  passFld.addEventListener('keydown', e=>{ if(e.key==='Enter') loadCFStories(); });
-  filterFld.addEventListener('input', renderCFList);
-
-  cancelBtn.onclick = ()=>{ modal.classList.remove('on'); };
-
-  loadBtn.onclick = ()=>{
-    if(!cfSelected) return;
-    const s = cfSelected;
-    if(!document.getElementById('fmScenario').value.trim())
-      document.getElementById('fmScenario').value = s.scenario || '';
-    if(!document.getElementById('fmCharacter').value.trim())
-      document.getElementById('fmCharacter').value = s.character || '';
-    if(!document.getElementById('fmSummary').value.trim())
-      document.getElementById('fmSummary').value = s.summary || '';
-    if(fmTags.get().length === 0 && s.tags && s.tags.length)
-      fmTags.setAll(s.tags);
-    modal.classList.remove('on');
-    cfMsg('Details copied from "' + (s.scenario||'story') + '".');
-  };
-})();
 </script>
 </body>
 </html>
